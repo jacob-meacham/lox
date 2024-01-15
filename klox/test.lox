@@ -1,0 +1,37 @@
+// This is a line comment
+/* This is a block comment */
+/* This is a block comment
+// that continues to go
+/* here is another that is embedded */
+*/
+var a = "foo";
+var b = 123.456 + 121;
+b?.test()
+var c = "foo\nbar"
+if (c == true) {
+    print("true")
+} else {
+    print(false)
+}
+
+for (var a in 0..9) {
+    print(a)
+}
+
+@
+
+var q = switch(b) {
+    "foo" -> "bar"
+    "baz" -> "foo"
+    else -> "default"
+}
+
+var d = nil
+var e = d ?: "null"
+while (a <= b) {
+}
+
+fun testFn(a, b, c="foo") {
+    return c
+}
+/* Test
