@@ -169,6 +169,8 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
             ')' -> simpleToken(TokenType.RIGHT_PAREN)
             '{' -> simpleToken(TokenType.LEFT_BRACE)
             '}' -> simpleToken(TokenType.RIGHT_BRACE)
+            '[' -> simpleToken(TokenType.LEFT_BRACKET)
+            ']' -> simpleToken(TokenType.RIGHT_BRACKET)
             ',' -> simpleToken(TokenType.COMMA)
             '.' -> simpleToken(if (match('.')) TokenType.RANGE else TokenType.DOT)
             '-' -> simpleToken(if (match('>')) TokenType.POINT_TO else TokenType.MINUS)

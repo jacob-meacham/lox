@@ -1,9 +1,12 @@
 package lox
 
+import kotlin.math.exp
+
 class ParseError : RuntimeException()
 
 class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     var currentTok = 0
+    var commasCanBeGroup = true
 
     fun parse(): Expr? {
         return try {
@@ -18,66 +21,59 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         return block()
     }
 
-    // block -> equality ( , equality )*
-    private fun block(): Expr {
-        var expr = equality()
-
-        while (match(TokenType.COMMA)) {
+    // TODO: Consider refactoring
+    private fun binaryZeroOrMore(nextGrammar: () -> (Expr), vararg tokenTypes: TokenType): Expr {
+        var expr = nextGrammar()
+        while (match(*tokenTypes)) {
             val operator = previous()
-            val right = block()
+            val right = nextGrammar()
             expr = Binary(expr, operator, right)
         }
 
         return expr
+    }
+
+    // block -> equality ( , equality )*
+    private fun block(): Expr {
+        var expr = elvis()
+
+        while (commasCanBeGroup && match(TokenType.COMMA)) {
+            val operator = previous()
+            val right = elvis()
+            expr = Binary(expr, operator, right)
+        }
+
+        return expr
+    }
+
+    // elvis → equality ( ( "?:" ) equality )* ;
+    private fun elvis(): Expr {
+        return binaryZeroOrMore(this::equality, TokenType.ELVIS)
     }
 
     // equality → comparison ( ( "!=" | "==" ) comparison )* ;
     private fun equality(): Expr {
-        var expr = comparison()
-
-        while (match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL)) {
-            val operator = previous()
-            val right = comparison()
-            expr = Binary(expr, operator, right)
-        }
-
-        return expr
+        return binaryZeroOrMore(this::comparison, TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL)
     }
 
-    // comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+    // comparison → range ( ( ">" | ">=" | "<" | "<=" ) range )* ;
     private fun comparison(): Expr {
-        var expr = term()
-        while (match(TokenType.LESS, TokenType.LESS_EQUAL, TokenType.GREATER, TokenType.GREATER_EQUAL)) {
-            val operator: Token = previous()
-            val right: Expr = term()
-            expr = Binary(expr, operator, right)
-        }
+        return binaryZeroOrMore(this::range, TokenType.LESS, TokenType.LESS_EQUAL, TokenType.GREATER, TokenType.GREATER_EQUAL)
+    }
 
-        return expr
+    // range → term ( ".." ) term ;
+    private fun range(): Expr {
+        return binaryZeroOrMore(this::term, TokenType.RANGE)
     }
 
     // term → factor ( ( "-" | "+" ) factor )* ;
     private fun term(): Expr {
-        var expr = factor()
-        while (match(TokenType.MINUS, TokenType.PLUS)) {
-            val operator: Token = previous()
-            val right: Expr = factor()
-            expr = Binary(expr, operator, right)
-        }
-
-        return expr
+        return binaryZeroOrMore(this::factor, TokenType.MINUS, TokenType.PLUS)
     }
 
     // factor → unary ( ( "/" | "*" ) unary )* ;
     private fun factor(): Expr {
-        var expr = unary()
-        while (match(TokenType.SLASH, TokenType.STAR)) {
-            val operator: Token = previous()
-            val right: Expr = factor()
-            expr = Binary(expr, operator, right)
-        }
-
-        return expr
+        return binaryZeroOrMore(this::unary, TokenType.SLASH, TokenType.STAR)
     }
 
     // unary → ( "!" | "-" ) unary
@@ -93,16 +89,38 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     }
 
     //primary → NUMBER | STRING | "true" | "false" | "nil"
+    //        | "[" expression ( "," expression)* "]"
     //        | "(" expression ")" ;
     internal fun primary(): Expr {
         if (match(TokenType.FALSE)) return Literal(false)
         if (match(TokenType.TRUE)) return Literal(true)
         if (match(TokenType.NIL)) return Literal(null) // TODO: Should I allow this, or have my own null type?
-        if (match(TokenType.NUMBER)) {
-            return Literal(previous().lexeme.toDouble())
-        }
         if (match(TokenType.STRING)) {
             return Literal(previous().lexeme)
+        }
+        if (match(TokenType.NUMBER)) {
+            if ('.' in previous().lexeme) {
+                return Literal(previous().lexeme.toDouble())
+            }
+            return Literal(previous().lexeme.toInt())
+        }
+
+        // Non-lazy list
+        // TODO: Is there a better way to do this? Seems like this is an expression?
+        if (match(TokenType.LEFT_BRACKET)) {
+            commasCanBeGroup = false
+            val exprList = mutableListOf<Expr>()
+            while (!check(TokenType.RIGHT_BRACKET) && !check(TokenType.EOF)) {
+                val prev = expression()
+                exprList.add(prev)
+
+                if (!match(TokenType.COMMA)) {
+                    break
+                }
+            }
+            consume(TokenType.RIGHT_BRACKET)
+            commasCanBeGroup = true
+            return Literal(exprList)
         }
 
         if (match(TokenType.LEFT_PAREN)) {

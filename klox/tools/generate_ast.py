@@ -14,7 +14,6 @@ interface Expr {{
 }}  
 """
 
-
 def build_type(name: str, fields: [str]) -> str:
     constructor = ', '.join([f'val {field.split(" ")[1].strip()}: {field.split(" ")[0].strip()}' for field in fields])
     return f"""

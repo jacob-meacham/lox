@@ -16,3 +16,4 @@
 - [ ] Add *=, /=
 - [ ] Use let instead of var?
 - [ ] Add good test coverage!
+- [ ] Allow calling into functions defined in Kotlin

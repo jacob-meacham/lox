@@ -25,8 +25,10 @@ class Interpreter(private val errorReporter: ErrorReporter) : ExprVisitor<Any?> 
             }
             TokenType.PLUS -> {
                 if (left is Number && right is Number) {
-                    (left as Double) + (right as Double)
+                    left.toDouble() + right.toDouble()
                 } else if (left is String && right is String) {
+                    left + right
+                } else if (left is List<*> && right is List<*>) {
                     left + right
                 } else {
                     throw error(expr.operator, "Mismatched types $left + $right")
@@ -44,6 +46,13 @@ class Interpreter(private val errorReporter: ErrorReporter) : ExprVisitor<Any?> 
             TokenType.COMMA -> {
                 right
             }
+            TokenType.RANGE -> {
+                // For now, only allow ranges of numbers
+                return (getInt(expr.operator, left)..getInt(expr.operator, right)).toList()
+            }
+            TokenType.ELVIS -> {
+                left ?: right
+            }
             else -> throw error(expr.operator, "Bad Parser")
         }
     }
@@ -53,6 +62,9 @@ class Interpreter(private val errorReporter: ErrorReporter) : ExprVisitor<Any?> 
     }
 
     override fun visitLiteral(expr: Literal): Any? {
+        if (expr.value is List<*>) {
+            return expr.value.map { evaluate(it as Expr) }
+        }
         return expr.value
     }
 
@@ -73,7 +85,15 @@ class Interpreter(private val errorReporter: ErrorReporter) : ExprVisitor<Any?> 
     }
 
     private fun getNumber(token: Token, value: Any?): Double {
+        if (value is Int) {
+            return value.toDouble()
+        }
+
         return (value as? Double) ?: throw error(token, "$value is not a number")
+    }
+
+    private fun getInt(token: Token, value: Any?): Int {
+        return (value as? Int) ?: throw error(token, "$value is not a number")
     }
 
     private fun isEqual(left: Any?, right: Any?): Boolean {
