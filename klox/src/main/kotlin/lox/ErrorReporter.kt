@@ -1,3 +1,5 @@
+package lox
+
 interface ErrorReporter {
     fun error(line: Int, column: Int, location: String, message: String)
     fun warn(line: Int, column: Int, location: String, message: String)

@@ -1,22 +1,25 @@
+package lox
+
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import kotlin.system.exitProcess
 
-// TODO: Don't require semicolons, instead allow for \n like Go
-// TODO: Add fold, scan, map, filter etc on array
-// TODO: Add let like Kotlin
-// TODO: Allow for x in y
-// TODO: Allow for 1..10
-// TODO: Add arrays and map types as builtins
-// TODO: Allow array slices
-
 fun run(location: String, script: String) {
     val errorReporter = ConsoleErrorReporter()
     val scanner = Scanner(location, script, errorReporter)
     val tokens = scanner.scanTokens()
-    for (token in tokens) {
-        println(token)
+
+    val parser = Parser(tokens, errorReporter)
+    val expression = parser.parse()
+
+    val interpreter = Interpreter(errorReporter)
+    try {
+        expression?.let {
+            println(interpreter.evaluate(it))
+        }
+    } catch (_: InterpreterError) {
+
     }
 }
 

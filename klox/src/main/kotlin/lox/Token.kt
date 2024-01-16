@@ -1,3 +1,5 @@
+package lox
+
 enum class TokenType {
     // Single-character tokens
     LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
@@ -19,7 +21,20 @@ enum class TokenType {
     AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
     PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE, SWITCH, IN,
 
-    EOF
+    EOF;
+
+    companion object {
+        val synchronizedTokens: Set<TokenType> = setOf(
+            TokenType.CLASS,
+            TokenType.FUN,
+            TokenType.VAR,
+            TokenType.FOR,
+            TokenType.IF,
+            TokenType.WHILE,
+            TokenType.PRINT,
+            TokenType.RETURN
+        )
+    }
 }
 
 data class Token(val type: TokenType, val lexeme: String, val offset: Int) {

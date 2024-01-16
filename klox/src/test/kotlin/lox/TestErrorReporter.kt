@@ -1,3 +1,5 @@
+package lox
+
 data class Issue(val line: Int, val column: Int, val location: String, val message: String, val isError: Boolean)
 class TestErrorReporter : ErrorReporter {
     val issues: MutableList<Issue> = mutableListOf()

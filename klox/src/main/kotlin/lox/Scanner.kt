@@ -1,3 +1,5 @@
+package lox
+
 class Scanner(val location: String, val source: String, val errorReporter: ErrorReporter) {
     companion object {
         val reservedIdentifiers: HashMap<String, TokenType> = hashMapOf(
@@ -31,7 +33,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
     }
 
     private fun peek(lookahead: Int = 0) : Char? {
-        return if (currentPos + lookahead >= source.length) null else source[currentPos + lookahead]
+        return source.getOrNull(currentPos + lookahead)
     }
 
     private fun match(s: Char) : Boolean {
@@ -156,7 +158,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
         return Token(TokenType.NUMBER, source.substring(startPos, currentPos), startPos)
      }
 
-    private fun simpleToken(tokenType: TokenType): Token  {
+    private fun simpleToken(tokenType: TokenType): Token {
         return Token(tokenType, source.substring(startPos..<currentPos).toString(), startPos)
     }
 
@@ -216,7 +218,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
         return token
     }
 
-    fun scanTokens(): Iterable<Token> {
+    fun scanTokens(): List<Token> {
         val tokens = mutableListOf<Token>()
         while (currentPos < source.length) {
             startPos = currentPos
