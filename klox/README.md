@@ -6,9 +6,10 @@
 - [ ] Add fold, scan, map, filter etc on array
 - [ ] Add let { } like Kotlin
 - [ ] Allow for x in y
-- [ ] Allow for 1..10
-- [ ] Add arrays and map types as builtins
-- [ ] Allow array slices
+- [X] Allow for 1..10
+  - https://kotlinlang.org/docs/ranges.html#progression
+- [X] Add arrays type as builtins
+- [X] Allow array slices
 - [ ] Write a SublimeText (or VSCode) plugin for Lox
 - [ ] let something = loop { like in Rust
 - [ ] Let for, while, etc be expressions?
@@ -17,3 +18,16 @@
 - [ ] Use let instead of var?
 - [ ] Add good test coverage!
 - [ ] Allow calling into functions defined in Kotlin
+- [ ] "ab crashes
+- [X] [[1,2,3],[4,5,6],[7,8,9]] doesn't work (returns [[7,8,9]])
+- [ ] Add operator overloading
+- [ ] Add 'infix' operators surrounded by ``
+- [ ] Add tuples, without it interfering with groups
+- [ ] Do the cool var a, b = foo thing
+- [X] Allow for slices like [:4] and [4:]
+- [X] Allow for n-d arrays. Fix
+- [ ] Add imports like go (Capitalized is public)
+- [ ] Add where expressions
+  -     // expression -> expression
+        // expression -> block_expression
+        // block_expression -> statements | expression

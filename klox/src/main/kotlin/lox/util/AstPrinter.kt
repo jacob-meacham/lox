@@ -24,6 +24,14 @@ class AstPrinter : ExprVisitor<String> {
         return parenthesize(expr.operator.lexeme, expr.right);
     }
 
+    override fun visitSubscription(expr: Subscription): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun visitSlice(expr: Slice): String {
+        TODO("Not yet implemented")
+    }
+
     private fun parenthesize(name: String, vararg exprs: Expr): String {
         val builder = StringBuilder()
 

@@ -1,5 +1,7 @@
 package lox
 
+import kotlin.math.exp
+
 class InterpreterError : RuntimeException()
 
 // TODO: Should I have the error reporter here or just throw it in the error?
@@ -81,6 +83,48 @@ class Interpreter(private val errorReporter: ErrorReporter) : ExprVisitor<Any?> 
             }
 
             else -> throw error(expr.operator, "Bad Parser")
+        }
+    }
+
+    // TODO: I need these to include a token
+    // TODO: DRY up subscription and slice
+    override fun visitSubscription(expr: Subscription): Any? {
+        val left = evaluate(expr.left)
+        val index = evaluate(expr.index)
+
+        // Check for valid index type once, as it applies for both List and String
+        if (index !is Int) throw error(null, "Can't index with $index")
+
+        return when (left) {
+            is List<*> -> left[index]
+            is String -> left[index]
+            else -> throw error(null, "$left is not subscriptable")
+        }
+    }
+
+    // TODO: Add the slice of [4:] onto the Slice class instead?
+    override fun visitSlice(expr: Slice): Any {
+        val left = evaluate(expr.left)
+        val start = evaluate(expr.start)
+        var end = evaluate(expr.end)
+
+        // Check for valid index type once, as it applies for both List and String
+        if (start !is Int || end !is Int) throw error(null, "Can't index between $start and $end")
+        return when (left) {
+            // TODO: Catch
+            is List<*> -> {
+                if (end == -1) {
+                    end = left.size
+                }
+                left.subList(start,end)
+            }
+            is String -> {
+                if (end == -1) {
+                    end = left.length
+                }
+                left.substring(start..end)
+            }
+            else -> throw error(null, "$left is not subscriptable")
         }
     }
 

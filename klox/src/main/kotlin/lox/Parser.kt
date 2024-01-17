@@ -6,7 +6,7 @@ class ParseError : RuntimeException()
 
 class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     var currentTok = 0
-    var commasCanBeGroup = true
+    var bracketExpressionLevel = 0
 
     fun parse(): Expr? {
         return try {
@@ -21,7 +21,6 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         return block()
     }
 
-    // TODO: Consider refactoring
     private fun binaryZeroOrMore(nextGrammar: () -> (Expr), vararg tokenTypes: TokenType): Expr {
         var expr = nextGrammar()
         while (match(*tokenTypes)) {
@@ -37,7 +36,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     private fun block(): Expr {
         var expr = elvis()
 
-        while (commasCanBeGroup && match(TokenType.COMMA)) {
+        while (bracketExpressionLevel == 0 && match(TokenType.COMMA)) {
             val operator = previous()
             val right = elvis()
             expr = Binary(expr, operator, right)
@@ -77,7 +76,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     }
 
     // unary → ( "!" | "-" ) unary
-    //       | primary
+    //       | subscription
     internal fun unary(): Expr {
         if (match(TokenType.BANG, TokenType.MINUS)) {
             val operator: Token = previous()
@@ -85,7 +84,43 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
             return Unary(operator, right)
         }
 
-        return primary()
+        return subscription()
+    }
+
+    // TODO: Refactor this, it's ugly
+    // subscription → primary("["expression"]" | "["expression:expression"]")*
+    internal fun subscription(): Expr {
+        var expr = primary()
+        while (match(TokenType.LEFT_BRACKET)) {
+            if (match(TokenType.COLON)) {
+                // A slice of the form [:expr]
+                val end: Expr = expression()
+                consume(TokenType.RIGHT_BRACKET)
+                expr = Slice(expr, Literal(0), end)
+                continue
+            }
+
+            val start = expression()
+            if (match(TokenType.COLON)) {
+                if (peek()?.type == TokenType.RIGHT_BRACKET) {
+                    // A slice of the form [expr:]
+                    consume(TokenType.RIGHT_BRACKET)
+                    expr = Slice(expr, start, Literal(-1))
+                    continue
+                }
+
+                // A slice of the form [expr:expr]
+                val end: Expr = expression()
+                consume(TokenType.RIGHT_BRACKET)
+                expr = Slice(expr, start, end)
+                continue
+            } else {
+                consume(TokenType.RIGHT_BRACKET)
+                expr = Subscription(expr, start)
+            }
+        }
+
+        return expr
     }
 
     //primary → NUMBER | STRING | "true" | "false" | "nil"
@@ -94,7 +129,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     internal fun primary(): Expr {
         if (match(TokenType.FALSE)) return Literal(false)
         if (match(TokenType.TRUE)) return Literal(true)
-        if (match(TokenType.NIL)) return Literal(null) // TODO: Should I allow this, or have my own null type?
+        if (match(TokenType.NIL)) return Literal(null)
         if (match(TokenType.STRING)) {
             return Literal(previous().lexeme)
         }
@@ -105,22 +140,32 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
             return Literal(previous().lexeme.toInt())
         }
 
+        val a = {
+            var a = 10
+            a
+        }
+
+
+
         // Non-lazy list
         // TODO: Is there a better way to do this? Seems like this is an expression?
         if (match(TokenType.LEFT_BRACKET)) {
-            commasCanBeGroup = false
-            val exprList = mutableListOf<Expr>()
-            while (!check(TokenType.RIGHT_BRACKET) && !check(TokenType.EOF)) {
-                val prev = expression()
-                exprList.add(prev)
+            try {
+                bracketExpressionLevel++
+                val exprList = mutableListOf<Expr>()
+                while (!check(TokenType.RIGHT_BRACKET) && !check(TokenType.EOF)) {
+                    val prev = expression()
+                    exprList.add(prev)
 
-                if (!match(TokenType.COMMA)) {
-                    break
+                    if (!match(TokenType.COMMA)) {
+                        break
+                    }
                 }
+                consume(TokenType.RIGHT_BRACKET)
+                return Literal(exprList)
+            } finally {
+                bracketExpressionLevel--
             }
-            consume(TokenType.RIGHT_BRACKET)
-            commasCanBeGroup = true
-            return Literal(exprList)
         }
 
         if (match(TokenType.LEFT_PAREN)) {
