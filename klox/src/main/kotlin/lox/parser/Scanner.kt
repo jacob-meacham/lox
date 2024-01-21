@@ -1,4 +1,6 @@
-package lox
+package lox.parser
+
+import lox.ErrorReporter
 
 class Scanner(val location: String, val source: String, val errorReporter: ErrorReporter) {
     companion object {
@@ -13,7 +15,6 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
                 "if" to TokenType.IF,
                 "nil" to TokenType.NIL,
                 "or" to TokenType.OR,
-                "print" to TokenType.PRINT,
                 "return" to TokenType.RETURN,
                 "super" to TokenType.SUPER,
                 "switch" to TokenType.SWITCH,
@@ -74,8 +75,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
                 }
 
                 null -> {
-                    val lc: Pair<Int, Int> = getLineAndColumn(currentPos)
-                    errorReporter.error(lc.first, lc.second, location, "Unterminated block comment")
+                    errorReporter.error(currentPos, location, "Unterminated block comment")
                     break
                 }
 
@@ -91,14 +91,12 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
         while (peek()?.let { it: Char -> it != '"' } == true) {
             when (peek()) {
                 null -> {
-                    val lc: Pair<Int, Int> = getLineAndColumn(currentPos)
-                    errorReporter.error(lc.first, lc.second, location, "Unterminated string literal")
+                    errorReporter.error(currentPos, location, "Unterminated string literal")
                     return null
                 }
 
                 '\n' -> {
-                    val lc: Pair<Int, Int> = getLineAndColumn(currentPos)
-                    errorReporter.error(lc.first, lc.second, location, "Newline in string literal")
+                    errorReporter.error(currentPos, location, "Newline in string literal")
                     return null
                 }
 
@@ -111,8 +109,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
                         '"' -> sb.append('"')
                         '\\' -> sb.append('\\')
                         else -> {
-                            val lc: Pair<Int, Int> = getLineAndColumn(currentPos)
-                            errorReporter.error(lc.first, lc.second, location, "Invalid escape sequence")
+                            errorReporter.error(currentPos, location, "Invalid escape sequence")
                             return null
                         }
                     }
@@ -189,8 +186,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
                 } else if(match('.')) {
                     simpleToken(TokenType.SAFE_NAVIGATION)
                 } else {
-                    val lc = getLineAndColumn(startPos)
-                    errorReporter.error(lc.first, lc.second, location, "Invalid character $c")
+                    errorReporter.error(startPos, location, "Invalid character $c")
                     null
                 }
             }
@@ -210,8 +206,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
             in 'a' .. 'z', in 'A'..'Z', '_' -> scanIdentifier(c)
             in '0'.. '9' -> scanNumber()
             else -> {
-                val lc = getLineAndColumn(startPos)
-                errorReporter.error(lc.first, lc.second, location, "Invalid character $c")
+                errorReporter.error(startPos, location, "Invalid character $c")
                 null
             }
         }
@@ -230,13 +225,6 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
 
         tokens.add(Token(TokenType.EOF, "", source.length))
         return tokens
-    }
-
-    private fun getLineAndColumn(pos: Int) : Pair<Int, Int> {
-        val line = source.substring(0, pos).count { it == '\n' } + 1
-        val column = pos - source.lastIndexOf('\n', pos - 1)
-
-        return line to column
     }
 
     private fun setNewLineRelevant(type: TokenType) {

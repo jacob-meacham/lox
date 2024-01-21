@@ -1,6 +1,6 @@
 package lox.util
 
-import lox.*
+import lox.parser.*
 
 
 class AstPrinter : ExprVisitor<String> {
@@ -10,6 +10,10 @@ class AstPrinter : ExprVisitor<String> {
 
     override fun visitBinary(expr: Binary): String {
         return parenthesize(expr.operator.lexeme, expr.left, expr.right)
+    }
+
+    override fun visitCall(expr: Call): String {
+        TODO("Not yet implemented")
     }
 
     override fun visitGrouping(expr: Grouping): String {
@@ -22,6 +26,10 @@ class AstPrinter : ExprVisitor<String> {
 
     override fun visitUnary(expr: Unary): String {
         return parenthesize(expr.operator.lexeme, expr.right);
+    }
+
+    override fun visitVariable(expr: Variable): String {
+        TODO("Not yet implemented")
     }
 
     override fun visitSubscription(expr: Subscription): String {

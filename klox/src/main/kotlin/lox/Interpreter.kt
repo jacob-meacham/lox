@@ -1,11 +1,42 @@
 package lox
 
-import kotlin.math.exp
+import lox.parser.*
+import lox.parser.Grouping
+import lox.types.LoxCallable
 
+// TODO: Let's pass the environment everywhere in a map
 class InterpreterError : RuntimeException()
 
 // TODO: Should I have the error reporter here or just throw it in the error?
-class Interpreter(private val errorReporter: ErrorReporter) : ExprVisitor<Any?> {
+// TODO: Probably just throw it
+class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvironment: Environment) : ExprVisitor<Any?>, StmtVisitor<Unit> {
+    fun interpret(statements: List<Stmt>) {
+        try {
+            for (statement in statements) {
+                execute(statement)
+            }
+        } catch (error: InterpreterError) {
+            // TODO
+        }
+    }
+
+    internal fun execute(stmt: Stmt) {
+        stmt.accept(this)
+    }
+
+    internal fun evaluate(expr: Expr): Any? {
+        return expr.accept(this)
+    }
+    override fun visitExpressionStatement(stmt: ExpressionStatement) {
+        evaluate(stmt.expression)
+    }
+
+    override fun visitVar(stmt: Var) {
+        val value = stmt.initializer?.let { evaluate(it) }
+        rootEnvironment.define(stmt.name.lexeme, value)
+        println("Setting ${stmt.name.lexeme} to ${value}")
+    }
+
     override fun visitBinary(expr: Binary): Any? {
         val left = evaluate(expr.left)
         val right = evaluate(expr.right)
@@ -59,6 +90,15 @@ class Interpreter(private val errorReporter: ErrorReporter) : ExprVisitor<Any?> 
         }
     }
 
+    override fun visitCall(expr: Call): Any? {
+        val calleeValue: Any? = evaluate(expr.callee)
+        if (calleeValue !is LoxCallable) {
+            throw error(expr.paren, "Can only call functions and classes")
+        }
+        val arguments = expr.arguments.map { it: Expr -> evaluate(it) }
+        return calleeValue.call(this, arguments)
+    }
+
     override fun visitGrouping(expr: Grouping): Any? {
         return evaluate(expr.expression)
     }
@@ -84,6 +124,11 @@ class Interpreter(private val errorReporter: ErrorReporter) : ExprVisitor<Any?> 
 
             else -> throw error(expr.operator, "Bad Parser")
         }
+    }
+
+    override fun visitVariable(expr: Variable): Any? {
+        println("Value of: ${expr.name.lexeme} to ${rootEnvironment.get(expr.name.lexeme)}")
+        return rootEnvironment.get(expr.name.lexeme)
     }
 
     // TODO: I need these to include a token
@@ -157,14 +202,10 @@ class Interpreter(private val errorReporter: ErrorReporter) : ExprVisitor<Any?> 
         return true
     }
 
-    internal fun evaluate(expr: Expr): Any? {
-        return expr.accept(this)
-    }
-
     internal fun error(at: Token?, message: String): InterpreterError {
         // TODO: We need to be able to get the column from the source. Probably the error reporter just holds the source?
         // TODO: Location also wrong
-        at?.let { errorReporter.error(it.offset, it.length, "Interpreter", message) }
+        at?.let { errorReporter.runtimeError(it.offset, "Interpreter", message) }
         return InterpreterError()
     }
 }

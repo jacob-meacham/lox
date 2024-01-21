@@ -2,19 +2,14 @@
 - [ ] Many languages define + such that if either operand is a string, the other is converted to a string and the results are then concatenated. For example, "scone" + 4 would yield scone4. Extend the code in visitBinaryExpr() to support that.
 - [ ] Add support for the C-style conditional or “ternary” operator ?:. What precedence level is allowed between the ? and :? Is the whole operator left-associative or right-associative?
 - [ ] Add error productions to handle each binary operator appearing without a left-hand operand. In other words, detect a binary operator appearing at the beginning of an expression. Report that as an error, but also parse and discard a right-hand operand with the appropriate precedence.
-- [ ] Don't require semicolons, instead allow for \n like Go
+- [X] Don't require semicolons, instead allow for \n like Go
 - [ ] Add fold, scan, map, filter etc on array
-- [ ] Add let { } like Kotlin
-- [ ] Allow for x in y
+- [ ] Add .let { } like Kotlin
 - [X] Allow for 1..10
   - https://kotlinlang.org/docs/ranges.html#progression
 - [X] Add arrays type as builtins
 - [X] Allow array slices
 - [ ] Write a SublimeText (or VSCode) plugin for Lox
-- [ ] let something = loop { like in Rust
-- [ ] Let for, while, etc be expressions?
-- [ ] Add break
-- [ ] Add *=, /=
 - [ ] Use let instead of var?
 - [ ] Add good test coverage!
 - [ ] Allow calling into functions defined in Kotlin
@@ -22,12 +17,27 @@
 - [X] [[1,2,3],[4,5,6],[7,8,9]] doesn't work (returns [[7,8,9]])
 - [ ] Add operator overloading
 - [ ] Add 'infix' operators surrounded by ``
-- [ ] Add tuples, without it interfering with groups
-- [ ] Do the cool var a, b = foo thing
 - [X] Allow for slices like [:4] and [4:]
 - [X] Allow for n-d arrays. Fix
 - [ ] Add imports like go (Capitalized is public)
+- [ ] Add indexable type (string, list, map, tuple)
+- [ ] Remove comma operator
 - [ ] Add where expressions
   -     // expression -> expression
         // expression -> block_expression
-        // block_expression -> statements | expression
+        // block_expression -> statements | expressionStmt?
+- [ ] Blocks
+- [ ] If/Else (as expressions)
+- [ ] For... in
+- [ ] and/or (with short circuiting)
+- [ ] While
+- [ ] Add break (and continue)
+- [ ] let something = loop { like in Rust
+- [ ] Add block expressions
+- [ ] Add tuples, without it interfering with groups
+- [ ] Do the cool var a, b = foo thing
+- [ ] Allow for x in y
+- [ ] Function declaration and calling
+- [ ] Local functions and closures
+- [ ] anonymous function expressions
+- [ ] Make resolver that resolves into a flatmap?

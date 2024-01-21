@@ -1,4 +1,4 @@
-package lox
+package lox.parser
 
 enum class TokenType {
     // Single-character tokens
@@ -19,20 +19,19 @@ enum class TokenType {
 
     // Keywords
     AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
-    PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE, SWITCH, IN,
+    RETURN, SUPER, THIS, TRUE, VAR, WHILE, SWITCH, IN,
 
     EOF;
 
     companion object {
         val synchronizedTokens: Set<TokenType> = setOf(
-            TokenType.CLASS,
-            TokenType.FUN,
-            TokenType.VAR,
-            TokenType.FOR,
-            TokenType.IF,
-            TokenType.WHILE,
-            TokenType.PRINT,
-            TokenType.RETURN
+            CLASS,
+            FUN,
+            VAR,
+            FOR,
+            IF,
+            WHILE,
+            RETURN
         )
     }
 }

@@ -1,23 +1,26 @@
 package lox
 
+import lox.parser.Parser
+import lox.parser.Scanner
+import lox.stdlib.Print
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import kotlin.system.exitProcess
 
 fun run(location: String, script: String) {
-    val errorReporter = ConsoleErrorReporter()
+    val errorReporter = ConsoleErrorReporter(script)
     val scanner = Scanner(location, script, errorReporter)
     val tokens = scanner.scanTokens()
 
     val parser = Parser(tokens, errorReporter)
-    val expression = parser.parse()
+    val statements = parser.parse()
 
-    val interpreter = Interpreter(errorReporter)
+    val globals = Environment()
+    globals.define("print", Print())
+    val interpreter = Interpreter(errorReporter, globals)
     try {
-        expression?.let {
-            println(interpreter.evaluate(it))
-        }
+        interpreter.interpret(statements)
     } catch (_: InterpreterError) {
 
     }

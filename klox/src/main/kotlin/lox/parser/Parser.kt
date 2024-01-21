@@ -1,22 +1,68 @@
-package lox
+package lox.parser
 
+import lox.*
 import kotlin.math.exp
+
 
 class ParseError : RuntimeException()
 
 class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     var currentTok = 0
-    var bracketExpressionLevel = 0
 
-    fun parse(): Expr? {
-        return try {
-            expression()
+    // program → declaration* EOF ;
+    fun parse(): List<Stmt> {
+        val statements: MutableList<Stmt> = ArrayList()
+        while (!isEOF()) {
+            declaration()?.let { statements.add(it) }
+        }
+
+        return statements
+    }
+
+    // declaration    → varDecl
+    //               | statement ;
+    private fun declaration(): Stmt? {
+        try {
+            return when {
+                match(TokenType.VAR) -> varDeclaration()
+                else -> statement()
+            }
         } catch (error: ParseError) {
-            null
+            synchronize()
+            return null
         }
     }
 
-    // expression → equality
+    private fun varDeclaration(): Stmt {
+        val name: Token = consume(TokenType.IDENTIFIER)
+
+
+        val initializer = when(match(TokenType.EQUAL)) {
+            true -> expression()
+            false -> null
+        }
+
+        // TODO: Turn this into an expect() instead of match() (like consume)
+        if (!match(TokenType.SEMICOLON, TokenType.NEWLINE)) {
+            throw error(peek(), "Unexpected tokens (use ';' to separate expressions on the same line)")
+        }
+
+        return Var(name, initializer)
+    }
+
+    private fun statement(): Stmt {
+        return expressionStatement()
+    }
+
+    private fun expressionStatement(): Stmt {
+        val expr = expression()
+        if (!match(TokenType.NEWLINE, TokenType.SEMICOLON)) {
+            throw error(peek(), "Unexpected tokens (use ';' to separate expressions on the same line)")
+        }
+        return ExpressionStatement(expr)
+    }
+
+    // expression → block
     private fun expression(): Expr {
         return block()
     }
@@ -32,11 +78,11 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         return expr
     }
 
-    // block -> equality ( , equality )*
+    // block -> elvis ( "," elvis )*
     private fun block(): Expr {
         var expr = elvis()
 
-        while (bracketExpressionLevel == 0 && match(TokenType.COMMA)) {
+        while (match(TokenType.COMMA)) {
             val operator = previous()
             val right = elvis()
             expr = Binary(expr, operator, right)
@@ -45,6 +91,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         return expr
     }
 
+    // TODO: Can use `or` instead
     // elvis → equality ( ( "?:" ) equality )* ;
     private fun elvis(): Expr {
         return binaryZeroOrMore(this::equality, TokenType.ELVIS)
@@ -57,7 +104,12 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
 
     // comparison → range ( ( ">" | ">=" | "<" | "<=" ) range )* ;
     private fun comparison(): Expr {
-        return binaryZeroOrMore(this::range, TokenType.LESS, TokenType.LESS_EQUAL, TokenType.GREATER, TokenType.GREATER_EQUAL)
+        return binaryZeroOrMore(this::range,
+            TokenType.LESS,
+            TokenType.LESS_EQUAL,
+            TokenType.GREATER,
+            TokenType.GREATER_EQUAL
+        )
     }
 
     // range → term ( ".." ) term ;
@@ -88,9 +140,9 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     }
 
     // TODO: Refactor this, it's ugly
-    // subscription → primary("["expression"]" | "["expression:expression"]")*
+    // subscription → call("["expression"]" | "["expression:expression"]")*
     internal fun subscription(): Expr {
-        var expr = primary()
+        var expr = call()
         while (match(TokenType.LEFT_BRACKET)) {
             if (match(TokenType.COLON)) {
                 // A slice of the form [:expr]
@@ -123,6 +175,35 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         return expr
     }
 
+    // TODO: Should move above subscription
+    internal fun call(): Expr {
+        var expr: Expr = primary()
+
+        while (true) {
+            if (match(TokenType.LEFT_PAREN)) {
+                expr = finishCall(expr)
+            } else {
+                break
+            }
+        }
+
+        return expr
+    }
+
+    private fun finishCall(callee: Expr): Expr {
+        val arguments: MutableList<Expr> = ArrayList()
+        if (!check(TokenType.RIGHT_PAREN)) {
+            do {
+                arguments.add(elvis())
+            } while (match(TokenType.COMMA))
+        }
+
+        // TODO: Make error messages better out of consume here
+        val paren = consume(TokenType.RIGHT_PAREN)
+
+        return Call(callee, paren, arguments)
+    }
+
     //primary → NUMBER | STRING | "true" | "false" | "nil"
     //        | "[" expression ( "," expression)* "]"
     //        | "(" expression ")" ;
@@ -140,32 +221,24 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
             return Literal(previous().lexeme.toInt())
         }
 
-        val a = {
-            var a = 10
-            a
+        if (match(TokenType.IDENTIFIER)) {
+            return Variable(previous())
         }
-
-
 
         // Non-lazy list
         // TODO: Is there a better way to do this? Seems like this is an expression?
         if (match(TokenType.LEFT_BRACKET)) {
-            try {
-                bracketExpressionLevel++
-                val exprList = mutableListOf<Expr>()
-                while (!check(TokenType.RIGHT_BRACKET) && !check(TokenType.EOF)) {
-                    val prev = expression()
-                    exprList.add(prev)
+            val exprList = mutableListOf<Expr>()
+            while (!check(TokenType.RIGHT_BRACKET) && !check(TokenType.EOF)) {
+                val prev = elvis()
+                exprList.add(prev)
 
-                    if (!match(TokenType.COMMA)) {
-                        break
-                    }
+                if (!match(TokenType.COMMA)) {
+                    break
                 }
-                consume(TokenType.RIGHT_BRACKET)
-                return Literal(exprList)
-            } finally {
-                bracketExpressionLevel--
             }
+            consume(TokenType.RIGHT_BRACKET)
+            return Literal(exprList)
         }
 
         if (match(TokenType.LEFT_PAREN)) {
@@ -193,6 +266,10 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         }
     }
 
+    internal fun isEOF(): Boolean {
+        return peek()?.let { it.type == TokenType.EOF } ?: true
+    }
+
     internal fun match(vararg types: TokenType) : Boolean {
         val match = types.firstOrNull { check(it) }
         return match?.let {
@@ -206,14 +283,18 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         return peek()?.type == tokenType
     }
 
-    internal fun advance(): Token? {
-        currentTok++
-        return tokens.getOrNull(currentTok)
+    internal fun advance(): Token {
+        if (!isEOF()) {
+            currentTok++
+        }
+        return tokens[currentTok]
     }
 
-    internal fun consume(expected: TokenType) {
+    internal fun consume(expected: TokenType): Token {
         if (check(expected)) {
+            // TODO: I don't like this
             advance()
+            return previous()
         } else {
             throw error(peek(), "Expecting ${expected}.")
         }
@@ -230,7 +311,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     private fun error(at: Token?, message: String): ParseError {
         // TODO: We need to be able to get the column from the source. Probably the error reporter just holds the source?
         // TODO: Location also wrong
-        at?.let { errorReporter.error(it.offset, it.length, "Parser", message) }
+        at?.let { errorReporter.error(it.offset, "Parser", message) }
         return ParseError()
     }
 }

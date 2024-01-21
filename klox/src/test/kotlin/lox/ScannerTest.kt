@@ -1,5 +1,8 @@
 package lox
 
+import lox.parser.Scanner
+import lox.parser.Token
+import lox.parser.TokenType
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions.*
 
@@ -51,7 +54,8 @@ class ScannerTest {
         """.trimIndent()
 
         val expected =
-                listOf(Token(type= TokenType.VAR, lexeme="var", offset=149),
+                listOf(
+                    Token(type= TokenType.VAR, lexeme="var", offset=149),
                         Token(type= TokenType.IDENTIFIER, lexeme="a", offset=153),
                         Token(type= TokenType.EQUAL, lexeme="=", offset=155),
                         Token(type= TokenType.STRING, lexeme="foo", offset=157),
@@ -168,7 +172,8 @@ class ScannerTest {
                         Token(type= TokenType.IDENTIFIER, lexeme="c", offset=495),
                         Token(type= TokenType.NEWLINE, lexeme="", offset=496),
                         Token(type= TokenType.RIGHT_BRACE, lexeme="}", offset=497),
-                        Token(type= TokenType.EOF, lexeme="", offset=506))
+                        Token(type= TokenType.EOF, lexeme="", offset=506)
+                )
 
         errorReporter = TestErrorReporter()  // Assumes default constructor for ErrorReporter.
         scanner = Scanner("test", source, errorReporter)
