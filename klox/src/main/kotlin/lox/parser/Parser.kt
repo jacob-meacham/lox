@@ -78,25 +78,6 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         return expr
     }
 
-    // block -> elvis ( "," elvis )*
-    private fun block(): Expr {
-        var expr = elvis()
-
-        while (match(TokenType.COMMA)) {
-            val operator = previous()
-            val right = elvis()
-            expr = Binary(expr, operator, right)
-        }
-
-        return expr
-    }
-
-    // TODO: Can use `or` instead
-    // elvis → equality ( ( "?:" ) equality )* ;
-    private fun elvis(): Expr {
-        return binaryZeroOrMore(this::equality, TokenType.ELVIS)
-    }
-
     // equality → comparison ( ( "!=" | "==" ) comparison )* ;
     private fun equality(): Expr {
         return binaryZeroOrMore(this::comparison, TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL)
