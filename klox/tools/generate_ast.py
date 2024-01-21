@@ -54,7 +54,7 @@ def main(grammar: IO, outdir: str):
     path = Path(outdir)
     sections = split_sections([l for l in grammar.readlines() if l != '\n'])
     for typ, section in sections:
-        out = build_preamble("lox", typ)
+        out = build_preamble("lox.parser", typ)
         items = []
         for g in section:
             name, fields = g.strip().split(':')

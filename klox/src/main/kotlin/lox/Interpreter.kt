@@ -1,7 +1,6 @@
 package lox
 
 import lox.parser.*
-import lox.parser.Grouping
 import lox.types.LoxCallable
 
 // TODO: Let's pass the environment everywhere in a map
@@ -9,7 +8,8 @@ class InterpreterError : RuntimeException()
 
 // TODO: Should I have the error reporter here or just throw it in the error?
 // TODO: Probably just throw it
-class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvironment: Environment) : ExprVisitor<Any?>, StmtVisitor<Unit> {
+class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvironment: Environment) : ExprVisitor<Any?>,
+    StmtVisitor<Any?> {
     fun interpret(statements: List<Stmt>) {
         try {
             for (statement in statements) {
@@ -20,21 +20,20 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         }
     }
 
-    internal fun execute(stmt: Stmt) {
-        stmt.accept(this)
+    internal fun execute(stmt: Stmt): Any? {
+        return stmt.accept(this)
     }
 
     internal fun evaluate(expr: Expr): Any? {
         return expr.accept(this)
     }
-    override fun visitExpressionStatement(stmt: ExpressionStatement) {
-        evaluate(stmt.expression)
+    override fun visitExpressionStatement(stmt: ExpressionStatement): Any? {
+        return evaluate(stmt.expression)
     }
 
-    override fun visitVar(stmt: Var) {
+    override fun visitVarStatement(stmt: VarStatement) {
         val value = stmt.initializer?.let { evaluate(it) }
         rootEnvironment.define(stmt.name.lexeme, value)
-        println("Setting ${stmt.name.lexeme} to ${value}")
     }
 
     override fun visitBinary(expr: Binary): Any? {
@@ -103,6 +102,15 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         return evaluate(expr.expression)
     }
 
+    override fun visitBlock(expr: Block): Any? {
+        var final : Any? = null
+        for (statement in expr.statements) {
+            final = execute(statement)
+        }
+
+        return final
+    }
+
     override fun visitLiteral(expr: Literal): Any? {
         if (expr.value is List<*>) {
             return expr.value.map { evaluate(it as Expr) }
@@ -126,8 +134,7 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         }
     }
 
-    override fun visitVariable(expr: Variable): Any? {
-        println("Value of: ${expr.name.lexeme} to ${rootEnvironment.get(expr.name.lexeme)}")
+    override fun visitVariableExpression(expr: VariableExpression): Any? {
         return rootEnvironment.get(expr.name.lexeme)
     }
 

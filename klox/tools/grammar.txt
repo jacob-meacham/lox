@@ -3,12 +3,13 @@ Binary: Expr left, Token operator, Expr right
 Call: Expr callee, Token paren, List<Expr> arguments
 Grouping: Expr expression
 Block: List<Stmt> statements
+When: Expr? initializer, List<CasePair> cases, Expr? catchall
 Literal: Any? value
 Unary: Token operator, Expr right
-Variable: Token name
+VariableExpression: Token name
 Subscription: Expr left, Expr index
 Slice: Expr left, Expr start, Expr end
 
 Stmt ->
 ExpressionStatement: Expr expression
-Var: Token name, Expr? initializer
+VarStatement: Token name, Expr? initializer

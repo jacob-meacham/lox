@@ -20,6 +20,10 @@ class AstPrinter : ExprVisitor<String> {
         return parenthesize("group", expr.expression)
     }
 
+    override fun visitBlock(expr: Block): String {
+        TODO("Not yet implemented")
+    }
+
     override fun visitLiteral(expr: Literal): String {
         return expr.value.toString();
     }
@@ -28,7 +32,7 @@ class AstPrinter : ExprVisitor<String> {
         return parenthesize(expr.operator.lexeme, expr.right);
     }
 
-    override fun visitVariable(expr: Variable): String {
+    override fun visitVariableExpression(expr: VariableExpression): String {
         TODO("Not yet implemented")
     }
 

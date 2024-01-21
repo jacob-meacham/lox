@@ -1,7 +1,6 @@
 package lox.parser
 
 import lox.*
-import kotlin.math.exp
 
 
 class ParseError : RuntimeException()
@@ -47,7 +46,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
             throw error(peek(), "Unexpected tokens (use ';' to separate expressions on the same line)")
         }
 
-        return Var(name, initializer)
+        return VarStatement(name, initializer)
     }
 
     private fun statement(): Stmt {
@@ -64,7 +63,23 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
 
     // expression → block
     private fun expression(): Expr {
-        return block()
+        if (match(TokenType.LEFT_BRACE)) {
+            return block()
+        }
+
+        return equality()
+    }
+
+    private fun block(): Expr {
+        val statements: MutableList<Stmt> = ArrayList()
+        while (!check(TokenType.RIGHT_BRACE) && !isEOF()) {
+            declaration()?.let { it: Stmt -> statements.add(it) }
+        }
+
+        // TODO: Make consumer throw better errors
+        consume(TokenType.RIGHT_BRACE)
+
+        return Block(statements)
     }
 
     private fun binaryZeroOrMore(nextGrammar: () -> (Expr), vararg tokenTypes: TokenType): Expr {
@@ -175,7 +190,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         val arguments: MutableList<Expr> = ArrayList()
         if (!check(TokenType.RIGHT_PAREN)) {
             do {
-                arguments.add(elvis())
+                arguments.add(expression())
             } while (match(TokenType.COMMA))
         }
 
@@ -203,7 +218,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         }
 
         if (match(TokenType.IDENTIFIER)) {
-            return Variable(previous())
+            return VariableExpression(previous())
         }
 
         // Non-lazy list
@@ -211,7 +226,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         if (match(TokenType.LEFT_BRACKET)) {
             val exprList = mutableListOf<Expr>()
             while (!check(TokenType.RIGHT_BRACKET) && !check(TokenType.EOF)) {
-                val prev = elvis()
+                val prev = expression()
                 exprList.add(prev)
 
                 if (!match(TokenType.COMMA)) {

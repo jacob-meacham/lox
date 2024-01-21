@@ -1,9 +1,24 @@
 // This is a line comment
 /* This is a block comment */
 
+
+var test = {
+var l = 15
+var j = 20
+l + j
+}
+
+print(test)
+
+var test2 = {
+var k = 1
+var m = 2
+}
+
+print(test2)
+
 var a = 10
 var b = 20
 var c = (a + b) * 10
-var d = print("Going to be discarded"),20
 print((a + b), " and then ", 10);
-print([1,2,3], 4, " ", d)
+print([1,2,3], 4)

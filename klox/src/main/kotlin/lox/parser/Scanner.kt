@@ -17,7 +17,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
                 "or" to TokenType.OR,
                 "return" to TokenType.RETURN,
                 "super" to TokenType.SUPER,
-                "switch" to TokenType.SWITCH,
+                "when" to TokenType.WHEN,
                 "this" to TokenType.THIS,
                 "in" to TokenType.IN,
                 "var" to TokenType.VAR,
@@ -181,9 +181,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
             '<' -> simpleToken(if (match('=')) TokenType.LESS_EQUAL else TokenType.LESS)
             '>' -> simpleToken(if (match('=')) TokenType.GREATER_EQUAL else TokenType.GREATER)
             '?' -> {
-                if (match(':')) {
-                    simpleToken(TokenType.ELVIS)
-                } else if(match('.')) {
+                if(match('.')) {
                     simpleToken(TokenType.SAFE_NAVIGATION)
                 } else {
                     errorReporter.error(startPos, location, "Invalid character $c")
@@ -229,7 +227,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
 
     private fun setNewLineRelevant(type: TokenType) {
         newlineRelevant = when(type) {
-            TokenType.IDENTIFIER, TokenType.STRING, TokenType.NUMBER, TokenType.RIGHT_PAREN, TokenType.NIL -> true
+            TokenType.IDENTIFIER, TokenType.STRING, TokenType.NUMBER, TokenType.RIGHT_PAREN, TokenType.NIL, TokenType.RIGHT_BRACKET, TokenType.RIGHT_BRACE -> true
             else -> false
         }
     }
