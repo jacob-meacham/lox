@@ -33,11 +33,16 @@
 - [ ] While
 - [ ] Add break (and continue)
 - [ ] let something = loop { like in Rust
-- [ ] Add block expressions
-- [ ] Add tuples, without it interfering with groups
+- [X] Add block expressions
+- [ ] Add tuples, without it interfering with groups (named or anon?)
 - [ ] Do the cool var a, b = foo thing
 - [ ] Allow for x in y
 - [ ] Function declaration and calling
 - [ ] Local functions and closures
 - [ ] anonymous function expressions
 - [ ] Make resolver that resolves into a flatmap?
+- [ ] Dies on fall through without an else branch
+- [ ] Should run if scanner or parser errors
+- [ ] Make error printing prettier (point to token)
+- [ ] Make sure every error has an offset
+- [ ] Add const as runtime error

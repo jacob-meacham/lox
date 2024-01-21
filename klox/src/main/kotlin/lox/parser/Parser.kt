@@ -22,10 +22,21 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     //               | statement ;
     private fun declaration(): Stmt? {
         try {
-            return when {
+            val stmt = when {
                 match(TokenType.VAR) -> varDeclaration()
+                match(TokenType.FOR) -> forStatement()
+                match(TokenType.BREAK) -> Break()
+                match(TokenType.CONTINUE) -> Continue()
+                //match(TokenType.WHILE) -> whileStatement()
                 else -> statement()
             }
+
+            // TODO: Write a consume for this
+            while(match(TokenType.SEMICOLON, TokenType.NEWLINE)) {
+                // any number of newlines or semicolons are OK after a statement
+            }
+
+            return stmt
         } catch (error: ParseError) {
             synchronize()
             return null
@@ -34,7 +45,6 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
 
     private fun varDeclaration(): Stmt {
         val name: Token = consume(TokenType.IDENTIFIER)
-
 
         val initializer = when(match(TokenType.EQUAL)) {
             true -> expression()
@@ -49,11 +59,24 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         return VarStatement(name, initializer)
     }
 
+    private fun forStatement(): Stmt {
+        consume(TokenType.LEFT_PAREN)
+        val loopVariable: Token = consume(TokenType.IDENTIFIER)
+        consume(TokenType.IN)
+
+        val loopOver: Expr = expression()
+        consume(TokenType.RIGHT_PAREN)
+        consume(TokenType.LEFT_BRACE) // TODO: Should this happen here? I want to force braces
+        val block = block()
+
+        return ForStatement(loopVariable, loopOver, block)
+    }
+
     private fun statement(): Stmt {
         return expressionStatement()
     }
 
-    private fun expressionStatement(): Stmt {
+    private fun expressionStatement(): ExpressionStatement {
         val expr = expression()
         if (!match(TokenType.NEWLINE, TokenType.SEMICOLON)) {
             throw error(peek(), "Unexpected tokens (use ';' to separate expressions on the same line)")
@@ -63,11 +86,49 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
 
     // expression → block
     private fun expression(): Expr {
-        if (match(TokenType.LEFT_BRACE)) {
-            return block()
+        return when {
+            match(TokenType.LEFT_BRACE) -> block() // TODO: Is this the right place for this?
+            match(TokenType.WHEN) -> whenExpr() // TODO: Is this the right place for this?
+            else -> equality()
+        }
+    }
+
+    private fun whenExpr(): Expr {
+        var initializer: Expr? = null
+        if (match(TokenType.LEFT_PAREN)) {
+            initializer = expression()
+            consume(TokenType.RIGHT_PAREN)
         }
 
-        return equality()
+        consume(TokenType.LEFT_BRACE)
+
+        var catchall: Expr? = null
+        val cases: MutableList<CasePair> = ArrayList()
+        while (!check(TokenType.RIGHT_BRACE) && !isEOF()) {
+            when {
+                match(TokenType.IN) -> {
+                    // TODO: Do an IN match
+                }
+
+                match(TokenType.ELSE) -> {
+                    consume(TokenType.POINT_TO)
+                    catchall = expressionStatement().expression
+                    break
+                }
+
+                else -> {
+                    val condition = expression()
+                    consume(TokenType.POINT_TO)
+                    val then = expressionStatement()
+
+                    cases.add(Pair(condition, then.expression))
+                }
+            }
+        }
+
+        consume(TokenType.RIGHT_BRACE)
+
+        return When(initializer, cases, catchall)
     }
 
     private fun block(): Expr {

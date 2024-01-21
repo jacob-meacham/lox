@@ -1,6 +1,11 @@
 // This is a line comment
 /* This is a block comment */
 
+for(a in 0..10) {
+    print(a)
+    //continue;
+    print(a+10)
+};;;
 
 var test = {
 var l = 15
@@ -20,5 +25,38 @@ print(test2)
 var a = 10
 var b = 20
 var c = (a + b) * 10
+
+var testWhen1 = when {
+a == 10 -> 20
+}
+
+(when (b) {
+    10 -> {
+        print
+    }
+    else -> print
+})("foo bar!");
+
+{
+    print("a starts as: ", a)
+    var a = 20
+    print("a is: ", a)
+    print("in a block!"); print("on the same line!")
+    {
+        print("in a block in a block!")
+    }
+}
+
+print("as is now: ", a)
+
+var testWhen2 = when(b) {
+    10 -> "a"
+    10 + 20 -> "b"
+    21 -> "d"
+    else -> "c"
+}
+
+print(testWhen1, " ", testWhen2)
+
 print((a + b), " and then ", 10);
 print([1,2,3], 4)

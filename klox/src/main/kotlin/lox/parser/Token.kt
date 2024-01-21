@@ -11,7 +11,7 @@ enum class TokenType {
     EQUAL, EQUAL_EQUAL,
     GREATER, GREATER_EQUAL,
     LESS, LESS_EQUAL,
-    ELVIS, SAFE_NAVIGATION, POINT_TO,
+    SAFE_NAVIGATION, POINT_TO,
     RANGE,
 
     // Literals
@@ -20,6 +20,7 @@ enum class TokenType {
     // Keywords
     AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
     RETURN, SUPER, THIS, TRUE, VAR, WHILE, WHEN, IN,
+    CONTINUE, BREAK,
 
     EOF;
 

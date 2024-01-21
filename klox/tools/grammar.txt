@@ -11,5 +11,8 @@ Subscription: Expr left, Expr index
 Slice: Expr left, Expr start, Expr end
 
 Stmt ->
+Break:
+Continue:
 ExpressionStatement: Expr expression
+ForStatement: Token loopVariable, Expr loopOver, Expr block
 VarStatement: Token name, Expr? initializer

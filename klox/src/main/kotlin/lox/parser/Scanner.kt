@@ -21,7 +21,9 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
                 "this" to TokenType.THIS,
                 "in" to TokenType.IN,
                 "var" to TokenType.VAR,
-                "while" to TokenType.WHILE
+                "while" to TokenType.WHILE,
+                "continue" to TokenType.CONTINUE,
+                "break" to TokenType.BREAK
         )
     }
 
