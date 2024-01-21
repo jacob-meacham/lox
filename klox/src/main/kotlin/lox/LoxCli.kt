@@ -2,7 +2,6 @@ package lox
 
 import lox.parser.Parser
 import lox.parser.Scanner
-import lox.stdlib.Print
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -17,7 +16,8 @@ fun run(location: String, script: String) {
     val statements = parser.parse()
 
     val globals = Environment()
-    globals.define("print", Print())
+    lox.stdlib.AddToEnvironment(globals)
+
     val interpreter = Interpreter(errorReporter, globals)
     try {
         interpreter.interpret(statements)

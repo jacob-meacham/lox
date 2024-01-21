@@ -1,13 +1,16 @@
 package lox
 
 import lox.parser.*
-import lox.types.LoxCallable
+import lox.types.*
+
 
 // TODO: Let's pass the environment everywhere in a map
 class InterpreterError : RuntimeException()
 
 class Break : RuntimeException()
 class Continue : RuntimeException()
+
+class Return(val value: Any?) : RuntimeException()
 
 // TODO: Should I have the error reporter here or just throw it in the error?
 // TODO: Probably just throw it
@@ -27,16 +30,27 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         return stmt.accept(this, environment)
     }
 
-    internal fun evaluate(expr: Expr, environment: Environment): Any? {
-        return expr.accept(this, environment)
+    // TODO: Should we split this for those that know they want unboxed?
+    internal fun evaluate(expr: Expr, environment: Environment, unbox: Boolean = false): Any? {
+        val result = expr.accept(this, environment)
+        return if (unbox && result is LoxInstance<*>) {
+            result.value
+        } else {
+            result
+        }
     }
 
-    override fun visitBreak(stmt: lox.parser.Break, environment: Environment): Any? {
+    override fun visitBreakStatement(stmt: BreakStatement, environment: Environment): Any? {
         throw Break()
     }
 
-    override fun visitContinue(stmt: lox.parser.Continue, environment: Environment): Any? {
+    override fun visitContinueStatement(stmt: ContinueStatement, environment: Environment): Any? {
         throw Continue()
+    }
+
+    override fun visitReturnStatement(stmt: ReturnStatement, environment: Environment): Any? {
+        val ret = stmt.value?.let { evaluate(it, environment) }
+        throw Return(ret)
     }
 
     override fun visitExpressionStatement(stmt: ExpressionStatement, environment: Environment): Any? {
@@ -46,13 +60,13 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
     override fun visitForStatement(stmt: ForStatement, environment: Environment) {
         // TODO: Loop over needs to be an iterable type
         val loopOver = evaluate(stmt.loopOver, environment)
-        if(loopOver !is List<*>) {
-            // TODO: Better error messae
+        if(loopOver !is LoxArray) {
+            // TODO: Better error message
             throw this.error(stmt.loopVariable,"Can't iterate over non-iterable")
         }
 
         val loopEnvironment = Environment(environment)
-        for (l in loopOver) {
+        for (l in loopOver.value) {
             try {
                 loopEnvironment.define(stmt.loopVariable.lexeme, l)
                 evaluate(stmt.block, loopEnvironment)
@@ -69,62 +83,91 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         environment.define(stmt.name.lexeme, value)
     }
 
-    override fun visitBinary(expr: Binary, environment: Environment): Any? {
-        val left = evaluate(expr.left, environment)
-        val right = evaluate(expr.right, environment)
+    override fun visitFunctionStatement(stmt: FunctionStatement, environment: Environment): Any? {
+        val function = LoxFunction(stmt.body, stmt.params, environment)
+        environment.define(stmt.name.lexeme, function)
+        return null
+    }
+
+    override fun visitBinary(expr: Binary, environment: Environment): Any {
+        val left = evaluate(expr.left, environment, true)
+        val right = evaluate(expr.right, environment, true)
 
         return when (expr.operator.type) {
             TokenType.EQUAL_EQUAL -> isEqual(left, right)
             TokenType.BANG_EQUAL -> !isEqual(left, right)
             TokenType.GREATER -> {
-                getNumber(expr.operator, left) > getNumber(expr.operator, right)
+                LoxInstance(getNumber(expr.operator, left) > getNumber(expr.operator, right))
             }
             TokenType.GREATER_EQUAL -> {
-                getNumber(expr.operator, left) >= getNumber(expr.operator, right)
+                LoxInstance(getNumber(expr.operator, left) >= getNumber(expr.operator, right))
             }
             TokenType.LESS -> {
-                getNumber(expr.operator, left) < getNumber(expr.operator, right)
+                LoxInstance(getNumber(expr.operator, left) < getNumber(expr.operator, right))
             }
             TokenType.LESS_EQUAL -> {
-                getNumber(expr.operator, left) <= getNumber(expr.operator, right)
+                LoxInstance(getNumber(expr.operator, left) <= getNumber(expr.operator, right))
             }
             TokenType.PLUS -> {
                 if (left is Number && right is Number) {
-                    left.toDouble() + right.toDouble()
-                } else if (left is String && right is String) {
-                    left + right
+                    LoxInstance(left.toDouble() + right.toDouble())
                 } else if (left is List<*> && right is List<*>) {
-                    left + right
+                    LoxArray(left + right)
+                } else if (left is String || right is String) {
+                    if (left is String) LoxString(left + right.toString()) else LoxString(left.toString() + right)
                 } else {
                     throw error(expr.operator, "Mismatched types $left + $right")
                 }
             }
             TokenType.MINUS -> {
-                getNumber(expr.operator, left) - getNumber(expr.operator, right)
+                LoxInstance(getNumber(expr.operator, left) - getNumber(expr.operator, right))
             }
             TokenType.SLASH -> {
-                getNumber(expr.operator, left) / getNumber(expr.operator, right)
+                LoxInstance(getNumber(expr.operator, left) / getNumber(expr.operator, right))
             }
             TokenType.STAR -> {
-                getNumber(expr.operator, left) * getNumber(expr.operator, right)
+                LoxInstance(getNumber(expr.operator, left) * getNumber(expr.operator, right))
             }
             TokenType.RANGE -> {
                 // For now, only allow ranges of numbers
                 // TODO: Make a range type
-                val t = (getInt(expr.operator, left)..getInt(expr.operator, right)).toList()
-                return t
+                return LoxArray((getInt(expr.operator, left)..getInt(expr.operator, right)).toList())
             }
             else -> throw error(expr.operator, "Bad Parser")
         }
     }
 
     override fun visitCall(expr: Call, environment: Environment): Any? {
-        val calleeValue: Any? = evaluate(expr.callee, environment)
+        val calleeValue: Any? = evaluate(expr.callee, environment, false)
+        if (calleeValue is LoxMaybe) {
+            return null // Can just return null here
+        }
+
         if (calleeValue !is LoxCallable) {
             throw error(expr.paren, "Can only call functions and classes")
         }
         val arguments = expr.arguments.map { it: Expr -> evaluate(it, environment) }
-        return calleeValue.call(this, arguments)
+
+        try {
+            return calleeValue.call(this, environment, arguments)
+        } catch (ret: Return) {
+            return ret.value
+        }
+    }
+
+    override fun visitGet(expr: Get, environment: Environment): Any? {
+        val v = evaluate(expr.obj, environment, false) as LoxInstance<*>
+
+        if (v.value == null) {
+            if (expr.safe) {
+                // TODO: This isn't really a Maybe type...
+                return LoxMaybe(v)
+            }
+
+            throw error(expr.name, "is null")
+        }
+
+        return v.get(expr.name.lexeme) ?: throw error(expr.name, "No method named ${expr.name.lexeme}")
     }
 
     override fun visitGrouping(expr: Grouping, environment: Environment): Any? {
@@ -139,6 +182,10 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         }
 
         return final
+    }
+
+    override fun visitIfElse(expr: IfElse, environment: Environment): Any? {
+        TODO("Not yet implemented")
     }
 
     override fun visitWhen(expr: When, environment: Environment): Any? {
@@ -160,11 +207,16 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         throw error("Fell through without an else branch")
     }
 
+    override fun visitFunctionExpression(expr: FunctionExpression, environment: Environment): Any? {
+        return LoxFunction(expr.body, expr.params, environment)
+    }
+
     override fun visitLiteral(expr: Literal, environment: Environment): Any? {
-        if (expr.value is List<*>) {
-            return expr.value.map { evaluate(it as Expr, environment) }
+        return when(expr.value) {
+            is List<*> -> LoxArray(expr.value.map { evaluate(it as Expr, environment) })
+            is String -> LoxString(expr.value)
+            else -> LoxInstance(expr.value)
         }
-        return expr.value
     }
 
     override fun visitUnary(expr: Unary, environment: Environment): Any {
@@ -183,6 +235,10 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         }
     }
 
+    override fun visitAssign(expr: Assign, environment: Environment) {
+        environment.assign(expr.name, evaluate(expr.value, environment))
+    }
+
     override fun visitVariableExpression(expr: VariableExpression, environment: Environment): Any? {
         return environment.get(expr.name.lexeme)
     }
@@ -197,33 +253,22 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         if (index !is Int) throw error(null, "Can't index with $index")
 
         return when (left) {
-            is List<*> -> left[index]
-            is String -> left[index]
+            is LoxIndexable<*> -> left.getAt(index)
             else -> throw error(null, "$left is not subscriptable")
         }
     }
 
     // TODO: Add the slice of [4:] onto the Slice class instead?
-    override fun visitSlice(expr: Slice, environment: Environment): Any {
+    override fun visitSlice(expr: Slice, environment: Environment): Any? {
         val left = evaluate(expr.left, environment)
         val start = evaluate(expr.start, environment)
-        var end = evaluate(expr.end, environment)
+        val end = evaluate(expr.end, environment)
 
         // Check for valid index type once, as it applies for both List and String
         if (start !is Int || end !is Int) throw error(null, "Can't index between $start and $end")
         return when (left) {
-            // TODO: Catch
-            is List<*> -> {
-                if (end == -1) {
-                    end = left.size
-                }
-                left.subList(start,end)
-            }
-            is String -> {
-                if (end == -1) {
-                    end = left.length
-                }
-                left.substring(start..end)
+            is LoxIndexable<*> -> {
+                left.getRange(start, end)
             }
             else -> throw error(null, "$left is not subscriptable")
         }

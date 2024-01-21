@@ -1,18 +1,24 @@
 Expr ->
 Binary: Expr left, Token operator, Expr right
 Call: Expr callee, Token paren, List<Expr> arguments
+Get: Expr obj, Boolean safe, Token name
 Grouping: Expr expression
 Block: List<Stmt> statements
+IfElse: Expr condition, Expr thenBranch, Expr? elseBranch
 When: Expr? initializer, List<CasePair> cases, Expr? catchall
+FunctionExpression: List<Token> params, Block body
 Literal: Any? value
 Unary: Token operator, Expr right
+Assign: Token name, Expr value
 VariableExpression: Token name
 Subscription: Expr left, Expr index
 Slice: Expr left, Expr start, Expr end
 
 Stmt ->
-Break:
-Continue:
 ExpressionStatement: Expr expression
-ForStatement: Token loopVariable, Expr loopOver, Expr block
+ForStatement: Token loopVariable, Expr loopOver, Block block
 VarStatement: Token name, Expr? initializer
+FunctionStatement: Token name, List<Token> params, Block body
+BreakStatement: Token keyword
+ContinueStatement: Token keyword
+ReturnStatement: Token keyword, Expr? value

@@ -1,48 +1,50 @@
 - [ ] What happens right now if you divide a number by zero? What do you think should happen? Justify your choice. How do other languages you know handle division by zero, and why do they make the choices they do?
 - [ ] Many languages define + such that if either operand is a string, the other is converted to a string and the results are then concatenated. For example, "scone" + 4 would yield scone4. Extend the code in visitBinaryExpr() to support that.
-- [ ] Add support for the C-style conditional or “ternary” operator ?:. What precedence level is allowed between the ? and :? Is the whole operator left-associative or right-associative?
 - [ ] Add error productions to handle each binary operator appearing without a left-hand operand. In other words, detect a binary operator appearing at the beginning of an expression. Report that as an error, but also parse and discard a right-hand operand with the appropriate precedence.
+- [ ] Write a SublimeText (or VSCode) plugin for Lox
+- [ ] Add good test coverage!
+- [ ] "ab crashes
+- [ ] Maybe type instead of nulls?
+- [ ] Add operator overloading
+- [ ] Add 'infix' operators surrounded by ``
+- [ ] Add imports like go (Capitalized is public)
+- [ ] If/Else (as expressions)
+- [ ] and/or (with short circuiting)
+- [ ] While
+- [ ] Add tuples, without it interfering with groups (named or anon?)
+- [ ] Do the cool var a, b = foo thing
+- [ ] Make resolver that resolves into a flatmap?
+- [ ] Dies on fall through without an else branch
+- [ ] Should not run if scanner or parser errors
+- [ ] Make error printing prettier (point to token)
+- [ ] Make sure every error has an offset
+- [ ] Add const as runtime error
+- [ ] When and if expression must be exhaustive, statement is Ok
+- [ ] Can't define and then immediately call an anon function (since it looks first for a function statement)
+- [ ] print((1..2) + (2..4)) works but print(1..2 + 2..4) doesn't. Is that right?
 - [X] Don't require semicolons, instead allow for \n like Go
-- [ ] Add fold, scan, map, filter etc on array
-- [ ] Add .let { } like Kotlin
+- [X] Add function blocks, which can appear outside parens for any function (ie the ability to pass in lambdas to Java code)
+- [X] Allow for x in y
+- [X] Function declaration and calling
+- [X] Local functions and closures
+- [X] anonymous function expressions
 - [X] Allow for 1..10
   - https://kotlinlang.org/docs/ranges.html#progression
 - [X] Add arrays type as builtins
 - [X] Allow array slices
-- [ ] Write a SublimeText (or VSCode) plugin for Lox
-- [ ] Use let instead of var?
-- [ ] Add good test coverage!
-- [ ] Allow calling into functions defined in Kotlin
-- [ ] "ab crashes
+- [X] Use let instead of var?
+- [X] Allow calling into functions defined in Kotlin
+- [X] Need to figure out unboxing so that code is clean but so that I can do (1 + 2).let { print(it); }
 - [X] [[1,2,3],[4,5,6],[7,8,9]] doesn't work (returns [[7,8,9]])
-- [ ] Add operator overloading
-- [ ] Add 'infix' operators surrounded by ``
 - [X] Allow for slices like [:4] and [4:]
 - [X] Allow for n-d arrays. Fix
-- [ ] Add imports like go (Capitalized is public)
-- [ ] Add indexable type (string, list, map, tuple)
-- [ ] Remove comma operator
-- [ ] Add where expressions
-  -     // expression -> expression
-        // expression -> block_expression
-        // block_expression -> statements | expressionStmt?
-- [ ] Blocks
-- [ ] If/Else (as expressions)
-- [ ] For... in
-- [ ] and/or (with short circuiting)
-- [ ] While
-- [ ] Add break (and continue)
-- [ ] let something = loop { like in Rust
+- [X] Add indexable type (string, list, map, tuple)
+- [X] Remove comma operator
+- [X] Add where expressions
+- [X] Blocks
+- [X] For... in
+- [X] Add break (and continue)
 - [X] Add block expressions
-- [ ] Add tuples, without it interfering with groups (named or anon?)
-- [ ] Do the cool var a, b = foo thing
-- [ ] Allow for x in y
-- [ ] Function declaration and calling
-- [ ] Local functions and closures
-- [ ] anonymous function expressions
-- [ ] Make resolver that resolves into a flatmap?
-- [ ] Dies on fall through without an else branch
-- [ ] Should run if scanner or parser errors
-- [ ] Make error printing prettier (point to token)
-- [ ] Make sure every error has an offset
-- [ ] Add const as runtime error
+- [X] Add support for the C-style conditional or “ternary” operator ?:. What precedence level is allowed between the ? and :? Is the whole operator left-associative or right-associative?
+- [X] Add fold, scan, map, filter etc on array
+- [X] Add .let { } like Kotlin

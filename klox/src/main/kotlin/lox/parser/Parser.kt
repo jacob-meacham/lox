@@ -1,6 +1,6 @@
 package lox.parser
 
-import lox.*
+import lox.ErrorReporter
 
 
 class ParseError : RuntimeException()
@@ -25,8 +25,10 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
             val stmt = when {
                 match(TokenType.VAR) -> varDeclaration()
                 match(TokenType.FOR) -> forStatement()
-                match(TokenType.BREAK) -> Break()
-                match(TokenType.CONTINUE) -> Continue()
+                match(TokenType.FUN) -> functionStatement()
+                match(TokenType.RETURN) -> returnStatement()
+                match(TokenType.BREAK) -> BreakStatement(previous())
+                match(TokenType.CONTINUE) -> ContinueStatement(previous())
                 //match(TokenType.WHILE) -> whileStatement()
                 else -> statement()
             }
@@ -53,10 +55,20 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
 
         // TODO: Turn this into an expect() instead of match() (like consume)
         if (!match(TokenType.SEMICOLON, TokenType.NEWLINE)) {
-            throw error(peek(), "Unexpected tokens (use ';' to separate expressions on the same line)")
+            throw error(peek(), "Unexpected tokens use ';' to separate expressions on the same line)")
         }
 
         return VarStatement(name, initializer)
+    }
+
+    private fun returnStatement(): Stmt {
+        val keyword = previous()
+        var value: Expr? = null
+        if (!check(TokenType.SEMICOLON) && !check(TokenType.NEWLINE)) {
+            value = expression();
+        }
+
+        return ReturnStatement(keyword, value)
     }
 
     private fun forStatement(): Stmt {
@@ -88,8 +100,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     private fun expression(): Expr {
         return when {
             match(TokenType.LEFT_BRACE) -> block() // TODO: Is this the right place for this?
-            match(TokenType.WHEN) -> whenExpr() // TODO: Is this the right place for this?
-            else -> equality()
+            else -> assignment()
         }
     }
 
@@ -131,7 +142,43 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         return When(initializer, cases, catchall)
     }
 
-    private fun block(): Expr {
+//    private fun ifExpr(): Expr {
+//        consume(TokenType.LEFT_PAREN)
+//        var condition = expression()
+//    }
+
+    private fun functionStatement(): Stmt {
+        val name = consume(TokenType.IDENTIFIER)
+        val parameters = functionParameters()
+
+        consume(TokenType.LEFT_BRACE)
+        val body = block()
+        return FunctionStatement(name, parameters, body)
+    }
+
+    private fun functionExpression(): Expr {
+        val parameters = functionParameters()
+
+        consume(TokenType.LEFT_BRACE)
+        val body = block()
+        return FunctionExpression(parameters, body)
+    }
+
+    private fun functionParameters(): List<Token> {
+        val parameters: MutableList<Token> = ArrayList()
+        if (match(TokenType.LEFT_PAREN)) {
+            if (!check(TokenType.RIGHT_PAREN)) {
+                do {
+                    parameters.add(consume(TokenType.IDENTIFIER))
+                } while (match(TokenType.COMMA))
+            }
+            consume(TokenType.RIGHT_PAREN)
+        }
+
+        return parameters
+    }
+
+    private fun block(): Block {
         val statements: MutableList<Stmt> = ArrayList()
         while (!check(TokenType.RIGHT_BRACE) && !isEOF()) {
             declaration()?.let { it: Stmt -> statements.add(it) }
@@ -149,6 +196,26 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
             val operator = previous()
             val right = nextGrammar()
             expr = Binary(expr, operator, right)
+        }
+
+        return expr
+    }
+
+    // assignment → IDENTIFIER "=" assignment
+    //            | equality ;
+
+    private fun assignment(): Expr {
+        val expr = equality()
+        if (match(TokenType.EQUAL)) {
+            val equals = previous()
+            val value = assignment()
+
+            if (expr is VariableExpression) {
+                val name: Token = expr.name
+                return Assign(name, value)
+            }
+
+            error(equals, "Invalid assignment target.")
         }
 
         return expr
@@ -237,10 +304,28 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         var expr: Expr = primary()
 
         while (true) {
-            if (match(TokenType.LEFT_PAREN)) {
-                expr = finishCall(expr)
-            } else {
-                break
+            when {
+                // TODO: I need to write the grammar out here.
+                // TODO: Add function block here as well?
+                match(TokenType.LEFT_PAREN) -> expr = finishCall(expr)
+                // TODO: DRY this all up
+                match(TokenType.LEFT_BRACE) -> {
+                    // TODO: For now, only allow function expressions with no parameters after a call?
+                    // TODO: Or it should just go into the code for parsing any lambda instead of block here.
+                    val body = block()
+
+                    // TODO: previous?
+                    return Call(expr, previous(), listOf(FunctionExpression(listOf(Token(TokenType.IDENTIFIER,"it", previous().offset)), body)))
+                }
+                match(TokenType.DOT) -> {
+                    val name = consume(TokenType.IDENTIFIER)
+                    expr = Get(expr, false, name)
+                }
+                match(TokenType.SAFE_NAVIGATION) -> {
+                    val name = consume(TokenType.IDENTIFIER)
+                    expr = Get(expr, true, name)
+                }
+                else -> break
             }
         }
 
@@ -257,6 +342,10 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
 
         // TODO: Make error messages better out of consume here
         val paren = consume(TokenType.RIGHT_PAREN)
+
+        if (match(TokenType.LEFT_BRACE)) {
+            arguments.add(block())
+        }
 
         return Call(callee, paren, arguments)
     }
@@ -302,6 +391,18 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
             val expr = expression()
             consume(TokenType.RIGHT_PAREN)
             return Grouping(expr)
+        }
+
+//        if (match(TokenType.IF)) {
+//            return ifExpr()
+//        }
+
+        if (match(TokenType.WHEN)) {
+            return whenExpr()
+        }
+
+        if (match(TokenType.FUN)) {
+            return functionExpression()
         }
 
         throw error(peek(), "Expected expression")
