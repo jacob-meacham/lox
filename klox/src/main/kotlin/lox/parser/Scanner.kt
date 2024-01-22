@@ -137,7 +137,9 @@ class Scanner(private val location: String, private val source: String, private 
         }
 
         val lexeme = sb.toString()
-        return reservedIdentifiers.get(lexeme)?.let { Token(it, lexeme, startPos, location) } ?: Token(TokenType.IDENTIFIER, lexeme, startPos, location)
+        return reservedIdentifiers[lexeme]?.let {
+            Token(it, lexeme, startPos, location) } ?:
+            Token(TokenType.IDENTIFIER, lexeme, startPos, location)
     }
 
     private fun scanNumber(): Token {
@@ -176,7 +178,6 @@ class Scanner(private val location: String, private val source: String, private 
             '+' -> simpleToken(TokenType.PLUS)
             ':' -> simpleToken(TokenType.COLON)
             ';' -> simpleToken(TokenType.SEMICOLON)
-            // TODO: Not sure if these will be needed
             '\n' -> if (newlineRelevant) Token(TokenType.NEWLINE, "", startPos, location) else null
             '!' -> simpleToken(if (match('=')) TokenType.BANG_EQUAL else TokenType.BANG)
             '=' -> simpleToken(if (match('=')) TokenType.EQUAL_EQUAL else TokenType.EQUAL)

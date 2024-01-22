@@ -26,6 +26,7 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
                 match(TokenType.VAR) -> varDeclaration()
                 match(TokenType.FOR) -> forStatement()
                 match(TokenType.FUN) -> functionStatement()
+                match(TokenType.WHEN) -> whenStatement()
                 match(TokenType.RETURN) -> returnStatement()
                 match(TokenType.BREAK) -> BreakStatement(previous())
                 match(TokenType.CONTINUE) -> ContinueStatement(previous())
@@ -104,7 +105,13 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
         }
     }
 
-    private fun whenExpr(): Expr {
+    private fun whenStatement(): Stmt {
+        val expr = whenExpr()
+        return WhenStatement(expr.token, expr.initializer, expr.cases, expr.catchall)
+    }
+
+    private fun whenExpr(): WhenExpression {
+        val token = previous()
         var initializer: Expr? = null
         if (match(TokenType.LEFT_PAREN)) {
             initializer = expression()
@@ -139,7 +146,7 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
 
         consume(TokenType.RIGHT_BRACE)
 
-        return When(initializer, cases, catchall)
+        return WhenExpression(token, initializer, cases, catchall)
     }
 
 //    private fun ifExpr(): Expr {
@@ -279,7 +286,7 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
 
             val start = expression()
             if (match(TokenType.COLON)) {
-                if (peek()?.type == TokenType.RIGHT_BRACKET) {
+                if (peek().type == TokenType.RIGHT_BRACKET) {
                     // A slice of the form [expr:]
                     consume(TokenType.RIGHT_BRACKET)
                     expr = Slice(expr, left, start, Literal(-1), previous())
@@ -370,8 +377,6 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
             return VariableExpression(previous())
         }
 
-        // Non-lazy list
-        // TODO: Is there a better way to do this? Seems like this is an expression?
         if (match(TokenType.LEFT_BRACKET)) {
             val exprList = mutableListOf<Expr>()
             while (!check(TokenType.RIGHT_BRACKET) && !check(TokenType.EOF)) {
@@ -415,7 +420,7 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
                 return
             }
 
-            when (peek()?.type) {
+            when (peek().type) {
                 in TokenType.synchronizedTokens -> return
                 TokenType.EOF -> return
                 else -> advance()
@@ -424,7 +429,7 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
     }
 
     internal fun isEOF(): Boolean {
-        return peek()?.let { it.type == TokenType.EOF } ?: true
+        return peek().type == TokenType.EOF
     }
 
     internal fun match(vararg types: TokenType) : Boolean {
@@ -437,7 +442,7 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
 
     // TODO: These should probably all return Token? instead of simply Token
     internal fun check(tokenType: TokenType): Boolean {
-        return peek()?.type == tokenType
+        return peek().type == tokenType
     }
 
     internal fun advance(): Token {

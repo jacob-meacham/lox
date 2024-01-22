@@ -21,7 +21,7 @@ class Clock : LoxCallable {
 }
 
 
-fun AddToEnvironment(environment: Environment) {
+fun addToEnvironment(environment: Environment) {
     environment.define("print", Print())
     environment.define("clock", Clock())
 }

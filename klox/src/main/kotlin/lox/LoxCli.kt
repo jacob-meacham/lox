@@ -25,7 +25,7 @@ fun run(location: String, script: String) {
     }
 
     val globals = Environment()
-    lox.stdlib.AddToEnvironment(globals)
+    lox.stdlib.addToEnvironment(globals)
 
     val interpreter = Interpreter(errorReporter, globals)
     try {

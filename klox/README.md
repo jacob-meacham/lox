@@ -1,9 +1,6 @@
-- [ ] What happens right now if you divide a number by zero? What do you think should happen? Justify your choice. How do other languages you know handle division by zero, and why do they make the choices they do?
-- [ ] Many languages define + such that if either operand is a string, the other is converted to a string and the results are then concatenated. For example, "scone" + 4 would yield scone4. Extend the code in visitBinaryExpr() to support that.
 - [ ] Add error productions to handle each binary operator appearing without a left-hand operand. In other words, detect a binary operator appearing at the beginning of an expression. Report that as an error, but also parse and discard a right-hand operand with the appropriate precedence.
 - [ ] Write a SublimeText (or VSCode) plugin for Lox
 - [ ] Add good test coverage!
-- [ ] "ab crashes
 - [ ] Maybe type instead of nulls?
 - [ ] Add operator overloading
 - [ ] Add 'infix' operators surrounded by ``
@@ -15,9 +12,6 @@
 - [ ] Do the cool var a, b = foo thing
 - [ ] Make resolver that resolves into a flatmap?
 - [ ] Dies on fall through without an else branch
-- [ ] Should not run if scanner or parser errors
-- [ ] Make error printing prettier (point to token)
-- [ ] Make sure every error has an offset
 - [ ] Add const as runtime error
 - [ ] When and if expression must be exhaustive, statement is Ok
 - [ ] Can't define and then immediately call an anon function (since it looks first for a function statement)
@@ -48,3 +42,9 @@
 - [X] Add support for the C-style conditional or “ternary” operator ?:. What precedence level is allowed between the ? and :? Is the whole operator left-associative or right-associative?
 - [X] Add fold, scan, map, filter etc on array
 - [X] Add .let { } like Kotlin
+- [X] Should not run if scanner or parser errors
+- [X] Make error printing prettier (point to token)
+- [X] Make sure every error has an offset
+- [X] "ab crashes
+- [X] Many languages define + such that if either operand is a string, the other is converted to a string and the results are then concatenated. For example, "scone" + 4 would yield scone4. Extend the code in visitBinaryExpr() to support that.
+- [X] What happens right now if you divide a number by zero? What do you think should happen? Justify your choice. How do other languages you know handle division by zero, and why do they make the choices they do?

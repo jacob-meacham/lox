@@ -64,7 +64,7 @@ class LoxArray(list: List<Any?>) : LoxInstance<List<Any?>>(list), LoxIndexable<A
         return accumulator
     }
 
-    internal fun scan(interpreter: Interpreter, environment: Environment, arguments: List<Any?>): Any? {
+    internal fun scan(interpreter: Interpreter, environment: Environment, arguments: List<Any?>): Any {
         if (arguments.size != 2) {
             throw RuntimeException()
         }

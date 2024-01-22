@@ -12,7 +12,6 @@ class Environment(private val enclosing: Environment?) {
     }
 
     fun assign(name: Token, value: Any?) {
-        // TODO: I don't like the returns out of this
         if (values.containsKey(name.lexeme)) {
             values[name.lexeme] = value
             return
@@ -23,18 +22,17 @@ class Environment(private val enclosing: Environment?) {
             return
         }
 
-        // TODO: Use error instead
-        throw RuntimeException("Undefined variable '$name'.")
+        throw InterpreterError(name, "Undefined variable '$name'.")
     }
 
-    fun get(name: String): Any? {
-        if (values.containsKey(name)) {
-            return values[name]
+    fun get(name: Token): Any? {
+        if (values.containsKey(name.lexeme)) {
+            return values[name.lexeme]
         }
         if (enclosing != null) {
             return enclosing.get(name)
         }
-        // TODO: Use error instead
-        throw RuntimeException("Undefined variable '$name'.")
+
+        throw InterpreterError(name,"Undefined variable '$name'.")
     }
 }

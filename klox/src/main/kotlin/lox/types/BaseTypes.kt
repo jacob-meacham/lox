@@ -14,10 +14,10 @@ open class LoxInstance<T>(val value: T) {
     protected val methods = mutableMapOf<String, LoxCallable>()
 
     init {
-        methods["let"] = LoxNativeFunction(this::let)
+        methods["let"] = LoxNativeFunction(::let)
     }
 
-    public open fun get(name: String): Any? {
+    open fun get(name: String): Any? {
         if (fields.containsKey(name)) {
             return fields[name]
         }
@@ -29,7 +29,7 @@ open class LoxInstance<T>(val value: T) {
         return null
     }
 
-    fun getInstanceValue(): T {
+    private fun getInstanceValue(): T {
         return value
     }
 

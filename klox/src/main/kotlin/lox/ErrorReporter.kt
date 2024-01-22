@@ -3,6 +3,7 @@ package lox
 interface ErrorReporter {
     fun error(offset: Int, length: Int, location: String, message: String)
     fun runtimeError(offset: Int, length: Int, location: String, message: String)
+    fun fatalError(message: String)
     fun warn(offset: Int, length: Int, location: String, message: String)
 
     fun numErrors(): Int
@@ -23,14 +24,14 @@ class ConsoleErrorReporter(private val source: String) : ErrorReporter {
     private fun printError(offset: Int, length: Int, location: String, message: String) {
         val lc: Pair<Int, Int> = getLineAndColumn(offset)
         println("$location:${lc.first}:${lc.second}: $message")
-        var start = (offset - 10).coerceAtLeast(0)
+        var start = (offset - 20).coerceAtLeast(0)
         for (i in start..<offset) {
             if (source[i] == '\n') {
                 start = i+1
             }
         }
 
-        var end = (offset + length + 10).coerceAtMost(source.length)
+        var end = (offset + length + 20).coerceAtMost(source.length)
         for (i in offset..<end) {
             if (source[i] == '\n') {
                 end = i
@@ -54,6 +55,11 @@ class ConsoleErrorReporter(private val source: String) : ErrorReporter {
     override fun runtimeError(offset: Int, length: Int, location: String, message: String) {
         numErrors++
         printError(offset, length, location, message)
+    }
+
+    override fun fatalError(message: String) {
+        numErrors++
+        println(message)
     }
 
     override fun warn(offset: Int, length: Int, location: String, message: String) {

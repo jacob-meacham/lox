@@ -17,8 +17,10 @@ interface {type} {{
 }}
 """
 
+
 def build_type(name: str, type: str, fields: [str]) -> str:
-    constructor = ', '.join([f'val {field.split(" ")[1].strip()}: {field.split(" ")[0].strip()}' for field in fields if field])
+    constructor = ', '.join(
+        [f'val {field.split(" ")[1].strip()}: {field.split(" ")[0].strip()}' for field in fields if field])
     return f"""
 class {name}({constructor}) : {type} {{
     override fun<R> accept(visitor: {type}Visitor<R>, environment: Environment): R {{
@@ -29,13 +31,15 @@ class {name}({constructor}) : {type} {{
 
 
 def build_visitor(items: (str, str), type: str) -> str:
-    visitor_methods = '\n\t'.join([f"fun visit{name}({type.lower()}: {name}, environment: Environment): R" for name, _ in items])
+    visitor_methods = '\n\t'.join(
+        [f"fun visit{name}({type.lower()}: {name}, environment: Environment): R" for name, _ in items])
 
     return f"""
 interface {type}Visitor<R> {{
     {visitor_methods}
 }}
 """
+
 
 def split_sections(lst: list):
     section = []
