@@ -247,30 +247,30 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
     // TODO: DRY up subscription and slice
     override fun visitSubscription(expr: Subscription, environment: Environment): Any? {
         val left = evaluate(expr.left, environment)
-        val index = evaluate(expr.index, environment)
+        val index = evaluate(expr.index, environment, true)
 
         // Check for valid index type once, as it applies for both List and String
-        if (index !is Int) throw error(null, "Can't index with $index")
+        if (index !is Int) throw error(expr.startBracket, "Can't index with $index")
 
         return when (left) {
             is LoxIndexable<*> -> left.getAt(index)
-            else -> throw error(null, "$left is not subscriptable")
+            else -> throw error(expr.startBracket, "$left is not subscriptable")
         }
     }
 
     // TODO: Add the slice of [4:] onto the Slice class instead?
     override fun visitSlice(expr: Slice, environment: Environment): Any? {
         val left = evaluate(expr.left, environment)
-        val start = evaluate(expr.start, environment)
-        val end = evaluate(expr.end, environment)
+        val start = evaluate(expr.start, environment, true)
+        val end = evaluate(expr.end, environment, true)
 
         // Check for valid index type once, as it applies for both List and String
-        if (start !is Int || end !is Int) throw error(null, "Can't index between $start and $end")
+        if (start !is Int || end !is Int) throw error(expr.startBracket, "Can't index between $start and $end")
         return when (left) {
             is LoxIndexable<*> -> {
                 left.getRange(start, end)
             }
-            else -> throw error(null, "$left is not subscriptable")
+            else -> throw error(expr.startBracket, "$left is not subscriptable")
         }
     }
 
@@ -303,10 +303,10 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         return true
     }
 
-    internal fun error(at: Token?, message: String): InterpreterError {
+    internal fun error(at: Token, message: String): InterpreterError {
         // TODO: We need to be able to get the column from the source. Probably the error reporter just holds the source?
         // TODO: Location also wrong
-        at?.let { errorReporter.runtimeError(it.offset, "Interpreter", message) }
+        errorReporter.runtimeError(at.offset, at.length, at.location, message)
         return InterpreterError()
     }
 }

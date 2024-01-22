@@ -5,8 +5,8 @@ import lox.ErrorReporter
 
 class ParseError : RuntimeException()
 
-class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
-    var currentTok = 0
+class Parser(private val tokens: List<Token>, private val errorReporter: ErrorReporter) {
+    private var currentTok = 0
 
     // program → declaration* EOF ;
     fun parse(): List<Stmt> {
@@ -65,7 +65,7 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         val keyword = previous()
         var value: Expr? = null
         if (!check(TokenType.SEMICOLON) && !check(TokenType.NEWLINE)) {
-            value = expression();
+            value = expression()
         }
 
         return ReturnStatement(keyword, value)
@@ -268,11 +268,12 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
     internal fun subscription(): Expr {
         var expr = call()
         while (match(TokenType.LEFT_BRACKET)) {
+            val left = previous()
             if (match(TokenType.COLON)) {
                 // A slice of the form [:expr]
                 val end: Expr = expression()
-                consume(TokenType.RIGHT_BRACKET)
-                expr = Slice(expr, Literal(0), end)
+                val right = consume(TokenType.RIGHT_BRACKET)
+                expr = Slice(expr, left, Literal(0), end, right)
                 continue
             }
 
@@ -281,18 +282,18 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
                 if (peek()?.type == TokenType.RIGHT_BRACKET) {
                     // A slice of the form [expr:]
                     consume(TokenType.RIGHT_BRACKET)
-                    expr = Slice(expr, start, Literal(-1))
+                    expr = Slice(expr, left, start, Literal(-1), previous())
                     continue
                 }
 
                 // A slice of the form [expr:expr]
                 val end: Expr = expression()
-                consume(TokenType.RIGHT_BRACKET)
-                expr = Slice(expr, start, end)
+                val right = consume(TokenType.RIGHT_BRACKET)
+                expr = Slice(expr, left, start, end, right)
                 continue
             } else {
-                consume(TokenType.RIGHT_BRACKET)
-                expr = Subscription(expr, start)
+                val right = consume(TokenType.RIGHT_BRACKET)
+                expr = Subscription(expr, left, start, right)
             }
         }
 
@@ -306,16 +307,14 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         while (true) {
             when {
                 // TODO: I need to write the grammar out here.
-                // TODO: Add function block here as well?
                 match(TokenType.LEFT_PAREN) -> expr = finishCall(expr)
                 // TODO: DRY this all up
                 match(TokenType.LEFT_BRACE) -> {
-                    // TODO: For now, only allow function expressions with no parameters after a call?
-                    // TODO: Or it should just go into the code for parsing any lambda instead of block here.
                     val body = block()
 
                     // TODO: previous?
-                    return Call(expr, previous(), listOf(FunctionExpression(listOf(Token(TokenType.IDENTIFIER,"it", previous().offset)), body)))
+                    // TODO: Location
+                    return Call(expr, previous(), listOf(FunctionExpression(listOf(Token(TokenType.IDENTIFIER,"it", previous().offset, "parser")), body)))
                 }
                 match(TokenType.DOT) -> {
                     val name = consume(TokenType.IDENTIFIER)
@@ -458,18 +457,16 @@ class Parser(val tokens: List<Token>, val errorReporter: ErrorReporter) {
         }
     }
 
-    internal fun peek(lookahead: Int = 0) : Token? {
-        return tokens.getOrNull(currentTok + lookahead)
+    internal fun peek(lookahead: Int = 0) : Token {
+        return tokens[currentTok + lookahead]
     }
 
     internal fun previous(): Token {
         return tokens[currentTok - 1]
     }
 
-    private fun error(at: Token?, message: String): ParseError {
-        // TODO: We need to be able to get the column from the source. Probably the error reporter just holds the source?
-        // TODO: Location also wrong
-        at?.let { errorReporter.error(it.offset, "Parser", message) }
+    private fun error(at: Token, message: String): ParseError {
+        errorReporter.error(at.offset, at.length,at.location, message)
         return ParseError()
     }
 }

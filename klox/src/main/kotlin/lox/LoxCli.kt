@@ -15,6 +15,15 @@ fun run(location: String, script: String) {
     val parser = Parser(tokens, errorReporter)
     val statements = parser.parse()
 
+    if (errorReporter.numErrors > 0) {
+        println("Parsing failed with ${errorReporter.numErrors} error(s).")
+        return
+    }
+
+    if (errorReporter.numWarnings > 0) {
+        println("Parsing succeeded with ${errorReporter.numWarnings} warnings(s).")
+    }
+
     val globals = Environment()
     lox.stdlib.AddToEnvironment(globals)
 

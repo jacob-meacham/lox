@@ -37,7 +37,7 @@ enum class TokenType {
     }
 }
 
-data class Token(val type: TokenType, val lexeme: String, val offset: Int) {
+data class Token(val type: TokenType, val lexeme: String, val offset: Int, val location: String) {
     val length: Int
         get() = lexeme.length
 }

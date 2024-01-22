@@ -11,8 +11,8 @@ Literal: Any? value
 Unary: Token operator, Expr right
 Assign: Token name, Expr value
 VariableExpression: Token name
-Subscription: Expr left, Expr index
-Slice: Expr left, Expr start, Expr end
+Subscription: Expr left, Token startBracket, Expr index, Token endBracket
+Slice: Expr left, Token startBracket, Expr start, Expr end, Token endBracket
 
 Stmt ->
 ExpressionStatement: Expr expression

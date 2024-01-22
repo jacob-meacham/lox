@@ -2,7 +2,7 @@ package lox.parser
 
 import lox.ErrorReporter
 
-class Scanner(val location: String, val source: String, val errorReporter: ErrorReporter) {
+class Scanner(private val location: String, private val source: String, private val errorReporter: ErrorReporter) {
     companion object {
         val reservedIdentifiers: HashMap<String, TokenType> = hashMapOf(
                 "and" to TokenType.AND,
@@ -77,7 +77,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
                 }
 
                 null -> {
-                    errorReporter.error(currentPos, location, "Unterminated block comment")
+                    errorReporter.error(currentPos, 1, location, "Unterminated block comment")
                     break
                 }
 
@@ -93,12 +93,12 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
         while (peek()?.let { it: Char -> it != '"' } == true) {
             when (peek()) {
                 null -> {
-                    errorReporter.error(currentPos, location, "Unterminated string literal")
+                    errorReporter.error(currentPos, 1, location, "Unterminated string literal")
                     return null
                 }
 
                 '\n' -> {
-                    errorReporter.error(currentPos, location, "Newline in string literal")
+                    errorReporter.error(currentPos, 1, location, "Newline in string literal")
                     return null
                 }
 
@@ -111,7 +111,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
                         '"' -> sb.append('"')
                         '\\' -> sb.append('\\')
                         else -> {
-                            errorReporter.error(currentPos, location, "Invalid escape sequence")
+                            errorReporter.error(currentPos, 1, location, "Invalid escape sequence")
                             return null
                         }
                     }
@@ -126,7 +126,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
         advance()
         val lexeme = sb.toString()
 
-        return Token(TokenType.STRING, lexeme, startPos)
+        return Token(TokenType.STRING, lexeme, startPos, location)
     }
 
     private fun scanIdentifier(c: Char): Token {
@@ -137,7 +137,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
         }
 
         val lexeme = sb.toString()
-        return reservedIdentifiers.get(lexeme)?.let { Token(it, lexeme, startPos) } ?: Token(TokenType.IDENTIFIER, lexeme, startPos)
+        return reservedIdentifiers.get(lexeme)?.let { Token(it, lexeme, startPos, location) } ?: Token(TokenType.IDENTIFIER, lexeme, startPos, location)
     }
 
     private fun scanNumber(): Token {
@@ -154,11 +154,11 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
             }
         }
 
-        return Token(TokenType.NUMBER, source.substring(startPos, currentPos), startPos)
+        return Token(TokenType.NUMBER, source.substring(startPos, currentPos), startPos, location)
      }
 
     private fun simpleToken(tokenType: TokenType): Token {
-        return Token(tokenType, source.substring(startPos..<currentPos).toString(), startPos)
+        return Token(tokenType, source.substring(startPos..<currentPos), startPos, location)
     }
 
     // Not all lexemes turn into Tokens
@@ -177,7 +177,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
             ':' -> simpleToken(TokenType.COLON)
             ';' -> simpleToken(TokenType.SEMICOLON)
             // TODO: Not sure if these will be needed
-            '\n' -> if (newlineRelevant) Token(TokenType.NEWLINE, "", startPos) else null
+            '\n' -> if (newlineRelevant) Token(TokenType.NEWLINE, "", startPos, location) else null
             '!' -> simpleToken(if (match('=')) TokenType.BANG_EQUAL else TokenType.BANG)
             '=' -> simpleToken(if (match('=')) TokenType.EQUAL_EQUAL else TokenType.EQUAL)
             '<' -> simpleToken(if (match('=')) TokenType.LESS_EQUAL else TokenType.LESS)
@@ -186,7 +186,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
                 if(match('.')) {
                     simpleToken(TokenType.SAFE_NAVIGATION)
                 } else {
-                    errorReporter.error(startPos, location, "Invalid character $c")
+                    errorReporter.error(startPos, 1, location, "Invalid character $c")
                     null
                 }
             }
@@ -206,7 +206,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
             in 'a' .. 'z', in 'A'..'Z', '_' -> scanIdentifier(c)
             in '0'.. '9' -> scanNumber()
             else -> {
-                errorReporter.error(startPos, location, "Invalid character $c")
+                errorReporter.error(startPos, 1, location, "Invalid character $c")
                 null
             }
         }
@@ -223,7 +223,7 @@ class Scanner(val location: String, val source: String, val errorReporter: Error
             scanNextLexeme()?.let { tokens.add(it) }
         }
 
-        tokens.add(Token(TokenType.EOF, "", source.length))
+        tokens.add(Token(TokenType.EOF, "", source.length, location))
         return tokens
     }
 
