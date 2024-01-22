@@ -5,17 +5,17 @@
 - [ ] Add operator overloading
 - [ ] Add 'infix' operators surrounded by ``
 - [ ] Add imports like go (Capitalized is public)
-- [ ] If/Else (as expressions)
-- [ ] and/or (with short circuiting)
-- [ ] While
 - [ ] Add tuples, without it interfering with groups (named or anon?)
 - [ ] Do the cool var a, b = foo thing
 - [ ] Make resolver that resolves into a flatmap?
-- [ ] Dies on fall through without an else branch
 - [ ] Add const as runtime error
 - [ ] When and if expression must be exhaustive, statement is Ok
 - [ ] Can't define and then immediately call an anon function (since it looks first for a function statement)
 - [ ] print((1..2) + (2..4)) works but print(1..2 + 2..4) doesn't. Is that right?
+- [X] Dies on fall through without an else branch
+- [X] If/Else (as expressions)
+- [X] and/or (with short circuiting)
+- [X] While
 - [X] Don't require semicolons, instead allow for \n like Go
 - [X] Add function blocks, which can appear outside parens for any function (ie the ability to pass in lambdas to Java code)
 - [X] Allow for x in y

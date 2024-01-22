@@ -10,6 +10,16 @@
 //?>
 //for fun
 
+fun fib(n) {
+  if (n < 2) { return n }
+  return fib(n - 1) + fib(n - 2)
+}
+
+var before = clock()
+print(fib(25))
+var after = clock();
+print(after - before)
+
 print(5/0)
 print([1,2,3][0])
 print([1,2,3][0:2])
@@ -26,13 +36,19 @@ var whenResult = when(whenTest2) {
     else -> 0
 }
 
-whenResult = when(whenResult) {
-    0 -> 0
+var n = 0
+while (n < 10) {
+    print(n)
+    n = n + 1
+    if (n < 5) {
+        print("And less than 5")
+    } else {
+        print("And greater than 5")
+    }
 }
 
-whenResult = when(whenResult) {
-    10 -> 0
-}
+var n2 = if (n > 10) { 5; } else { 10; }
+print(n2)
 
 print((1..2) + (2..4))
 print("test 1 " + " and test 2")
@@ -41,7 +57,7 @@ print("this is now a string" + 3)
 var a = nil
 a?.let {
     print("Should not see this: ", a)
-}
+} or print("Should see this")
 
 var testArray = 1..10
 print(testArray?.filter { it > 5; })

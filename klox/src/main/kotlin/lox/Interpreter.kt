@@ -18,10 +18,13 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
                 execute(statement, rootEnvironment)
             }
         } catch (error: InterpreterError) {
-            errorReporter.runtimeError(error.at.offset, error.at.length, error.at.location,
-                "Interpreter Error: ${error.message}")
+            errorReporter.runtimeError(
+                error.at.offset, error.at.length, error.at.location,
+                "Interpreter Error: ${error.message}"
+            )
         } catch (error: RuntimeException) {
             errorReporter.fatalError("Fatal Error: ${error.message}")
+            throw error
         }
     }
 
@@ -29,6 +32,7 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         return stmt.accept(this, environment)
     }
 
+    // TODO: If we don't allow for unboxing, this can always return a LoxInstance. that's kind of nice.
     internal fun evaluate(expr: Expr, environment: Environment, unbox: Boolean = false): Any? {
         val result = expr.accept(this, environment)
         return if (unbox && result is LoxInstance<*>) {
@@ -57,8 +61,8 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
 
     override fun visitForStatement(stmt: ForStatement, environment: Environment) {
         val loopOver = evaluate(stmt.loopOver, environment)
-        if(loopOver !is LoxArray) {
-            throw InterpreterError(stmt.loopVariable,"Can't iterate over $loopOver")
+        if (loopOver !is LoxArray) {
+            throw InterpreterError(stmt.loopVariable, "Can't iterate over $loopOver")
         }
 
         val loopEnvironment = Environment(environment)
@@ -70,6 +74,21 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
                 break
             } catch (c: Continue) {
                 continue
+            }
+        }
+    }
+
+    override fun visitWhileStatement(stmt: WhileStatement, environment: Environment) {
+        // TODO: Could DRY these
+        if (isTruthy(evaluate(stmt.condition, environment, true))) {
+            while (isTruthy(evaluate(stmt.condition, environment, true))) {
+                try {
+                    evaluate(stmt.body, environment)
+                } catch (b: Break) {
+                    break
+                } catch (c: Continue) {
+                    continue
+                }
             }
         }
     }
@@ -95,15 +114,19 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
             TokenType.GREATER -> {
                 LoxInstance(getNumber(expr.operator, left) > getNumber(expr.operator, right))
             }
+
             TokenType.GREATER_EQUAL -> {
                 LoxInstance(getNumber(expr.operator, left) >= getNumber(expr.operator, right))
             }
+
             TokenType.LESS -> {
                 LoxInstance(getNumber(expr.operator, left) < getNumber(expr.operator, right))
             }
+
             TokenType.LESS_EQUAL -> {
                 LoxInstance(getNumber(expr.operator, left) <= getNumber(expr.operator, right))
             }
+
             TokenType.PLUS -> {
                 if (left is Number && right is Number) {
                     LoxInstance(left.toDouble() + right.toDouble())
@@ -116,26 +139,48 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
                     throw InterpreterError(expr.operator, "Mismatched types $left + $right")
                 }
             }
+
             TokenType.MINUS -> {
                 LoxInstance(getNumber(expr.operator, left) - getNumber(expr.operator, right))
             }
+
             TokenType.SLASH -> {
                 LoxInstance(getNumber(expr.operator, left) / getNumber(expr.operator, right))
             }
+
             TokenType.STAR -> {
                 LoxInstance(getNumber(expr.operator, left) * getNumber(expr.operator, right))
             }
+
             TokenType.RANGE -> {
                 return LoxArray((getInt(expr.operator, left)..getInt(expr.operator, right)).toList())
             }
+
             else -> throw InterpreterError(expr.operator, "Unknown operator ${expr.operator}")
         }
     }
 
+    override fun visitLogical(expr: Logical, environment: Environment): Any? {
+        // TODO: Need to figure out this unboxing thing...maybe isTruthy should do it?
+        val left = evaluate(expr.left, environment) as LoxInstance<*>
+        if (expr.operator.type == TokenType.OR) {
+            if (isTruthy(left.value)) {
+                return left
+            }
+        } else {
+            if (!isTruthy(left.value)) {
+                return left
+            }
+        }
+
+        return evaluate(expr.right, environment)
+    }
+
     override fun visitCall(expr: Call, environment: Environment): Any? {
         val calleeValue: Any? = evaluate(expr.callee, environment, false)
+        // TODO: This is mucked up
         if (calleeValue is LoxMaybe) {
-            return null // Can just return null here
+            return LoxInstance(null)
         }
 
         if (calleeValue !is LoxCallable) {
@@ -170,7 +215,7 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
     }
 
     override fun visitBlock(expr: Block, environment: Environment): Any? {
-        var final : Any? = null
+        var final: Any? = null
         val scopedEnvironment = Environment(environment)
         for (statement in expr.statements) {
             final = execute(statement, scopedEnvironment)
@@ -179,11 +224,27 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         return final
     }
 
-    override fun visitIfElse(expr: IfElse, environment: Environment): Any? {
-        TODO("Not yet implemented")
+    // TODO: Dry statement and expression
+    override fun visitIfElseStatement(stmt: IfElseStatement, environment: Environment) {
+        if (isTruthy(evaluate(stmt.condition, environment, true))) {
+            evaluate(stmt.thenBranch, environment)
+        } else {
+            stmt.elseBranch?.let { evaluate(stmt.elseBranch, environment) }
+        }
     }
 
-    // TODO: Dry
+    override fun visitIfElseExpression(expr: IfElseExpression, environment: Environment): Any? {
+        return if (isTruthy(evaluate(expr.condition, environment, true))) {
+            evaluate(expr.thenBranch, environment)
+        } else {
+            expr.elseBranch?.let { evaluate(expr.elseBranch, environment) } ?: throw InterpreterError(
+                expr.keyword,
+                "If expression must be non-exhaustive"
+            )
+        }
+    }
+
+    // TODO: DRY statement and expression
     override fun visitWhenExpression(expr: WhenExpression, environment: Environment): Any? {
         val initValue = expr.initializer?.let {
             evaluate(expr.initializer, environment)
@@ -225,7 +286,7 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
     }
 
     override fun visitLiteral(expr: Literal, environment: Environment): LoxInstance<*> {
-        return when(expr.value) {
+        return when (expr.value) {
             is List<*> -> LoxArray(expr.value.map { evaluate(it as Expr, environment) })
             is String -> LoxString(expr.value)
             else -> LoxInstance(expr.value)
@@ -237,11 +298,11 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
 
         return when (expr.operator.type) {
             TokenType.MINUS -> {
-                -getNumber(expr.operator, right)
+                LoxInstance(-getNumber(expr.operator, right))
             }
 
             TokenType.BANG -> {
-                isTruthy(right)
+                LoxInstance(isTruthy(right))
             }
 
             else -> throw InterpreterError(expr.operator, "Unknown operator ${expr.operator}")
@@ -276,11 +337,15 @@ class Interpreter(private val errorReporter: ErrorReporter, private val rootEnvi
         val end = evaluate(expr.end, environment, true)
 
         // Check for valid index type once, as it applies for both List and String
-        if (start !is Int || end !is Int) throw InterpreterError(expr.startBracket, "Can't index between $start and $end")
+        if (start !is Int || end !is Int) throw InterpreterError(
+            expr.startBracket,
+            "Can't index between $start and $end"
+        )
         return when (left) {
             is LoxIndexable<*> -> {
                 left.getRange(start, end)
             }
+
             else -> throw InterpreterError(expr.startBracket, "$left is not subscriptable")
         }
     }

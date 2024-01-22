@@ -1,6 +1,7 @@
 package lox.parser
 
 import lox.ErrorReporter
+import javax.management.Query.and
 
 
 class ParseError : RuntimeException()
@@ -25,12 +26,13 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
             val stmt = when {
                 match(TokenType.VAR) -> varDeclaration()
                 match(TokenType.FOR) -> forStatement()
-                match(TokenType.FUN) -> functionStatement()
+                match(TokenType.IF) -> ifStatement()
+                match(TokenType.WHILE) -> whileStatement()
                 match(TokenType.WHEN) -> whenStatement()
+                match(TokenType.FUN) -> functionStatement()
                 match(TokenType.RETURN) -> returnStatement()
                 match(TokenType.BREAK) -> BreakStatement(previous())
                 match(TokenType.CONTINUE) -> ContinueStatement(previous())
-                //match(TokenType.WHILE) -> whileStatement()
                 else -> statement()
             }
 
@@ -79,10 +81,49 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
 
         val loopOver: Expr = expression()
         consume(TokenType.RIGHT_PAREN)
-        consume(TokenType.LEFT_BRACE) // TODO: Should this happen here? I want to force braces
+
+        consume(TokenType.LEFT_BRACE)
         val block = block()
 
         return ForStatement(loopVariable, loopOver, block)
+    }
+
+    private fun whileStatement(): Stmt {
+        consume(TokenType.LEFT_PAREN)
+
+        val condition: Expr = expression()
+        consume(TokenType.RIGHT_PAREN)
+
+        consume(TokenType.LEFT_BRACE)
+        val block = block()
+
+        return WhileStatement(condition, block)
+    }
+
+    private fun ifStatement(): Stmt {
+        val expr = ifExpression()
+        return IfElseStatement(expr.condition, expr.thenBranch, expr.elseBranch)
+    }
+
+    private fun ifExpression(): IfElseExpression {
+        val keyword = previous()
+
+        // TODO: Allow block or single statement
+        consume(TokenType.LEFT_PAREN)
+        val condition = expression()
+        consume(TokenType.RIGHT_PAREN)
+
+        consume(TokenType.LEFT_BRACE)
+        val thenBranch = block()
+
+        val elseBranch: Expr? = if (match(TokenType.ELSE)) {
+            consume(TokenType.LEFT_BRACE)
+            block()
+        } else {
+            null
+        }
+
+        return IfElseExpression(keyword, condition, thenBranch, elseBranch)
     }
 
     private fun statement(): Stmt {
@@ -149,21 +190,14 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
         return WhenExpression(token, initializer, cases, catchall)
     }
 
-//    private fun ifExpr(): Expr {
-//        consume(TokenType.LEFT_PAREN)
-//        var condition = expression()
-//    }
-
     private fun functionStatement(): Stmt {
         val name = consume(TokenType.IDENTIFIER)
-        val parameters = functionParameters()
+        val expr = functionExpression()
 
-        consume(TokenType.LEFT_BRACE)
-        val body = block()
-        return FunctionStatement(name, parameters, body)
+        return FunctionStatement(name, expr.params, expr.body)
     }
 
-    private fun functionExpression(): Expr {
+    private fun functionExpression(): FunctionExpression {
         val parameters = functionParameters()
 
         consume(TokenType.LEFT_BRACE)
@@ -212,7 +246,8 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
     //            | equality ;
 
     private fun assignment(): Expr {
-        val expr = equality()
+        val expr = or()
+
         if (match(TokenType.EQUAL)) {
             val equals = previous()
             val value = assignment()
@@ -223,6 +258,31 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
             }
 
             error(equals, "Invalid assignment target.")
+        }
+
+        return expr
+    }
+
+    // or -> and ( "or" and)* ;
+    private fun or(): Expr {
+        var expr = and()
+
+        while (match(TokenType.OR)) {
+            val operator = previous()
+            val right: Expr = and()
+            expr = Logical(expr, operator, right)
+        }
+
+        return expr
+    }
+
+    private fun and(): Expr {
+        var expr = equality()
+
+        while (match(TokenType.AND)) {
+            val operator = previous()
+            val right: Expr = equality()
+            expr = Logical(expr, operator, right)
         }
 
         return expr
@@ -397,9 +457,9 @@ class Parser(private val tokens: List<Token>, private val errorReporter: ErrorRe
             return Grouping(expr)
         }
 
-//        if (match(TokenType.IF)) {
-//            return ifExpr()
-//        }
+        if (match(TokenType.IF)) {
+            return ifExpression()
+        }
 
         if (match(TokenType.WHEN)) {
             return whenExpr()
