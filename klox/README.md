@@ -9,9 +9,9 @@
 - [ ] Do the cool var a, b = foo thing
 - [ ] Make resolver that resolves into a flatmap?
 - [ ] Add const as runtime error
-- [ ] When and if expression must be exhaustive, statement is Ok
 - [ ] Can't define and then immediately call an anon function (since it looks first for a function statement)
 - [ ] print((1..2) + (2..4)) works but print(1..2 + 2..4) doesn't. Is that right?
+- [X] When and if expression must be exhaustive, statement is Ok
 - [X] Dies on fall through without an else branch
 - [X] If/Else (as expressions)
 - [X] and/or (with short circuiting)
